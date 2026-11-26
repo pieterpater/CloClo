@@ -48,8 +48,7 @@ export function createSimulation(opts = {}) {
         anchor: S.anchor ? [S.anchor.x, S.anchor.y, S.anchor.z] : null,
         hop: hopN, wow: wowN
       },
-      needs: Object.fromEntries(Object.entries(brain.need).map(([k, v]) => [k, r2(v)])),
-      mood: r2(brain.mood()),
+      mood: S.mood,
       cat: {
         x: r2(cat.pos.x), z: r2(cat.pos.z), face: r2(cat.face),
         walking: cat.walking, sleeping: cat.sleeping, meeting: !!cat.meetAt
@@ -63,7 +62,7 @@ export function createSimulation(opts = {}) {
   function save() {
     const S = brain.S;
     return {
-      version: 1, T: world.T, need: brain.need, growth: garden.growth, diary, memory: brain.memory,
+      version: 1, T: world.T, mood: S.mood, growth: garden.growth, diary, memory: brain.memory,
       last: S.last, prev: S.act, plan: S.plan, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
       pos: body.position.toArray(), cat: cat.pos.toArray()
     };
@@ -72,7 +71,7 @@ export function createSimulation(opts = {}) {
     if (!d || d.version !== 1) return;
     const S = brain.S;
     world.T = d.T;
-    Object.assign(brain.need, d.need);
+    S.mood = d.mood || 'happy';
     garden.growth = d.growth;
     diary.splice(0, diary.length, ...d.diary.slice(0, DIARY_MAX));
     brain.memory.splice(0, brain.memory.length, ...d.memory);

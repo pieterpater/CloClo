@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { camera } from './scene.js';
 import { world, dayLabel } from './state.js';
 import { LOC } from './world/locations.js';
-import { ACTS, NEEDS } from './sim/acts.js';
+import { ACTS } from './sim/acts.js';
 
 const diaryEl = document.getElementById('diary');
 
@@ -16,24 +16,15 @@ export function write(entry) {
   while (diaryEl.children.length > 40) diaryEl.lastChild.remove();
 }
 
-const needsEl = document.getElementById('needs');
 const clockEl = document.getElementById('clock'), nowTxt = document.getElementById('nowTxt'), nowLoc = document.getElementById('nowLoc'), bubble = document.getElementById('bubble');
+const viewersEl = document.getElementById('viewers'), planEl = document.getElementById('nowPlan'), moodEl = document.getElementById('nowMood');
 
-export function setupHud() {
-  needsEl.innerHTML = NEEDS.map(([k, l, c]) => `<div class="need"><span>${l}</span><div class="bar"><i id="b-${k}" style="background:${c}"></i></div><em id="v-${k}"></em></div>`).join('');
-}
-
-const viewersEl = document.getElementById('viewers'), planEl = document.getElementById('nowPlan');
-
-// Clock, viewers, need bars and "currently doing".
-export function updateHud(need, S, viewers, connected) {
+// Clock, viewers, and what he is doing, feeling and planning.
+export function updateHud(mood, S, viewers, connected) {
   clockEl.textContent = connected ? dayLabel(world.T) : 'Reconnecting…';
   viewersEl.hidden = !viewers;
   viewersEl.textContent = viewers === 1 ? '1 watching' : viewers + ' watching';
-  for (const [k] of NEEDS) {
-    document.getElementById('b-' + k).style.width = need[k].toFixed(0) + '%';
-    document.getElementById('v-' + k).textContent = need[k].toFixed(0);
-  }
+  moodEl.textContent = mood ? 'Feeling ' + mood : '';
   const a = ACTS[S.act];
   if (!a) return;
   const L = LOC[a.loc];

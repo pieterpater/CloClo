@@ -7,7 +7,7 @@ import { buildCloClo } from './clo/model.js';
 import { animateCloClo } from './clo/animate.js';
 import { updateLight } from './lighting.js';
 import { cam, setupControls, updateCamera } from './controls.js';
-import { write, setupHud, updateHud, updateBubble } from './hud.js';
+import { write, updateHud, updateBubble } from './hud.js';
 import { updateParticles } from './particles.js';
 import { connect } from './source.js';
 import { isNightAt } from './sim/simulation.js';
@@ -32,16 +32,15 @@ async function start(renderer) {
   buildWorld();
   const model = buildCloClo();
   setupControls(stage);
-  setupHud();
 
   const source = await connect(write);
   // Only a copy running in this browser can be sped up; the live CloClo runs at the server's pace.
   document.getElementById('speed').hidden = source.remote;
   document.getElementById('brainNote').textContent = !source.remote
-    ? 'This copy of Mosdorp runs only in your browser. CloClo decides with simple rules based on his needs and the time of day.'
+    ? 'This copy of Mosdorp runs only in your browser. CloClo decides with simple rules based on the time of day.'
     : source.brain
-      ? 'Everyone watching sees the same CloClo, live. His choices, thoughts and diary are written by a language model (Claude Haiku 5.5), based on his needs and the time of day.'
-      : 'Everyone watching sees the same CloClo, live. He decides with simple rules based on his needs and the time of day.';
+      ? 'Everyone watching sees the same CloClo, live. What he does, thinks, feels and writes in his diary is decided freely by a language model (Claude Haiku 5.5).'
+      : 'Everyone watching sees the same CloClo, live. He decides with simple rules based on the time of day.';
 
   // What the drawing code needs to know about CloClo, filled from the simulation each frame.
   const V = { mode: null, act: null, thought: '', anchor: null, face: 0, hop: false, wow: false };
@@ -93,7 +92,7 @@ async function start(renderer) {
 
     updateBubble(stage, model.clo.position, V);
     hudT -= rd;
-    if (hudT < 0) { updateHud(view.needs, V, view.viewers, source.connected); hudT = .25; }
+    if (hudT < 0) { updateHud(view.mood, V, view.viewers, source.connected); hudT = .25; }
     requestAnimationFrame(frame);
   }
 

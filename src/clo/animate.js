@@ -11,8 +11,11 @@ const look = new THREE.Vector2(), lookGoal = new THREE.Vector2();
 const fxPos = new THREE.Vector3();
 
 // CloClo's pose and movement, rebuilt from a rest pose every frame.
-//   mood: 0–100 from the brain; isNight: whether it is dark outside
-export function animateCloClo(model, S, anim, rd, mood, isNight) {
+//   moodName: how he feels (delighted, happy, calm, sleepy, grumpy, sad); isNight: whether it is dark outside
+const MOOD = { delighted: 95, happy: 75, calm: 55, sleepy: 50, grumpy: 30, sad: 20 };
+
+export function animateCloClo(model, S, anim, rd, moodName, isNight) {
+  const mood = MOOD[moodName] ?? 75;
   const { clo, body, eyes, looks, brows, cheeks, mouth, open, tail, tuft, feet, arms, items, lantern } = model;
   const a = ACTS[S.act];
   const doing = S.mode === 'doing', s = doing ? S.act : null;
@@ -37,7 +40,7 @@ export function animateCloClo(model, S, anim, rd, mood, isNight) {
     const bounce = mood > 60 ? .24 : mood > 35 ? .18 : .1;
     body.position.y = Math.abs(Math.sin(w)) * bounce;
     body.rotation.z = Math.sin(w) * .07;
-    body.rotation.x = mood < 35 ? .12 : 0;
+    body.rotation.x = mood < 35 || moodName === 'sleepy' ? .12 : 0;
     feet[0].position.z = .2 + Math.sin(w) * .25;
     feet[1].position.z = .2 - Math.sin(w) * .25;
     arms[0].rotation.x = Math.sin(w) * .6;
@@ -130,7 +133,7 @@ export function animateCloClo(model, S, anim, rd, mood, isNight) {
   }
   if (wowT > 0) { wowT -= rd; mouthOpen = true; eyeSquint = 1.15; }
 
-  // mood on his face: smile or frown, eyebrows, cheeks; tired eyes when energy is low
+  // mood on his face: smile or frown, eyebrows, cheeks; heavy eyelids when sleepy or sad
   const happy = clamp((mood - 40) / 50, 0, 1), sad = clamp((40 - mood) / 30, 0, 1);
   mouth.visible = !mouthOpen;
   open.visible = mouthOpen;
@@ -143,7 +146,7 @@ export function animateCloClo(model, S, anim, rd, mood, isNight) {
     b.position.y = 1.62 + happy * .03;
   });
   cheeks.forEach(c => { const k = .75 + happy * .45 + (s === 'cat' ? .2 : 0); c.scale.x = c.scale.y = k; });
-  if (mood < 25 && !mouthOpen) eyeSquint = Math.min(eyeSquint, .7);
+  if ((moodName === 'sleepy' || mood < 25) && !mouthOpen) eyeSquint = Math.min(eyeSquint, moodName === 'sleepy' ? .55 : .7);
 
   // tail wags faster when he is happy; the tuft bobs along
   tail.rotation.y = Math.sin(anim * (4 + happy * 6)) * (.2 + happy * .25);

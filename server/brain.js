@@ -8,6 +8,7 @@ export const MODEL = 'claude-haiku-5-5';
 const PRICE = { input: .10, output: .50, cacheRead: .01, cacheWrite: .125 };
 
 const KEYS = Object.keys(ACTIVITY_INFO);
+const MOODS = ['delighted', 'happy', 'calm', 'sleepy', 'grumpy', 'sad'];
 
 const SYSTEM = `You are the mind of CloClo, a small, round, turquoise monster with little yellow horns, a curly tuft of hair and a stubby tail. He lives in Mosdorp, a tiny village. People watch his life live on a website, like a nature documentary about a very small monster. Nobody can talk to him; he simply lives his life. Each time he finishes something, you decide what he does next, and for how long. You are free: there is no right answer and no score to optimise.
 
@@ -15,7 +16,7 @@ Personality: curious, gentle, a little clumsy and easily delighted. He loves his
 
 Mosdorp: a round village with a square and a fountain in the middle. Around it: CloClo's house (with a picket fence and flower boxes), the bakery, the library, the post office, the ice cream stand, the park with a swing, the pond with ducks, the vegetable garden with tomatoes, the flower meadow with butterflies, and the lookout hill with a telescope. Biscuit strolls around the square and naps by the fountain at night.
 
-You also get five numbers from 0 to 100 that describe how his body feels right now (fullness, energy, fun, curiosity, company; low means he's hungry, tired, bored and so on). They are information, not orders. Like anyone, he can feel hungry and keep reading because the book is too good, or be tired and stay up for the stars. Let him follow his whims, his plans, his friends, the time of day and what happened earlier, and let his days have a shape and a story. Mosdorp is quiet at night and most creatures sleep then, but that is up to him too.
+He has no needs, stats or meters: nothing makes him hungry or tired. What he does is entirely up to you. Let him follow his whims, his plans, his friends, the time of day and what happened earlier, and give his days a shape and a story. Mosdorp is quiet at night and most creatures sleep then, but that is up to him too.
 
 Activities (use the key):
 ${KEYS.map(k => `- ${k}: ${ACTIVITY_INFO[k]}`).join('\n')}
@@ -25,6 +26,7 @@ Reply with JSON:
 - activity: the key of what he does next. It must be one of the activities that are open right now.
 - minutes: how many game minutes he spends on it once he gets there (5 to 600; a night's sleep can be up to 660).
 - thought: what he thinks as he sets off (at most 70 characters, first person).
+- mood: how he feels as he sets off: delighted, happy, calm, sleepy, grumpy or sad (sad is never more than a small sigh). It shows on his face.
 - plan: a short note to himself about what he'd like to do later, or "" (at most 80 characters). You'll see it again next time; you can keep it, change it or drop it.
 Write in English.`;
 
@@ -34,10 +36,11 @@ const SCHEMA = {
     diary: { type: 'string' },
     activity: { type: 'string', enum: KEYS },
     minutes: { type: 'integer' },
+    mood: { type: 'string', enum: MOODS },
     thought: { type: 'string' },
     plan: { type: 'string' }
   },
-  required: ['diary', 'activity', 'minutes', 'thought', 'plan'],
+  required: ['diary', 'activity', 'minutes', 'thought', 'mood', 'plan'],
   additionalProperties: false
 };
 
@@ -52,19 +55,16 @@ export function brainAvailable() {
 
 // Plain text only, one line, limited length: this text is shown publicly.
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
-const num = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
 
 // Builds the per-decision message from the state the browser sends.
 function situation(st) {
   const open = (Array.isArray(st.open) ? st.open : []).filter(k => KEYS.includes(k));
   if (!open.length) throw new Error('no open activities');
-  const n = st.needs || {};
   const h = Number(st.hour) || 0;
   const part = h < 6 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : h < 21.5 ? 'evening' : 'night';
   const lines = [
     `It is ${clean(st.time, 30)} (${part}).`,
     st.previous && KEYS.includes(st.previous) ? `CloClo just finished: ${st.previous}.` : 'CloClo has just woken up for the first time today.',
-    `How his body feels: fullness ${num(n.fullness)}, energy ${num(n.energy)}, fun ${num(n.fun)}, curiosity ${num(n.curiosity)}, company ${num(n.company)}.`,
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -106,6 +106,7 @@ export async function decide(state) {
     thought: clean(out.thought, 100),
     diary: clean(out.diary, 130),
     plan: clean(out.plan, 120),
+    mood: MOODS.includes(out.mood) ? out.mood : 'happy',
     minutes: Math.max(5, Math.min(out.activity === 'sleep' ? 660 : 600, Math.round(Number(out.minutes) || 30))),
     usage: { input: u.input_tokens, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, output: u.output_tokens, cost }
   };

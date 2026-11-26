@@ -29,7 +29,7 @@ Without the server (static hosting, or the server can't be reached) the page run
 
 ### The language-model brain
 
-With an API key, **Claude Haiku 5.5** decides what CloClo does next and for how long, writes the thought he sets off with and his diary lines, and keeps a short plan for later (shown under what he is doing). His needs are only information for the model, not orders: it may let him read on while hungry or stay up for the stars. Opening hours still apply. The server calls Claude each time CloClo finishes something; the key never reaches the browser.
+With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. He has no needs or stats; only opening hours limit what he can do.
 
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env   # .env is git-ignored (used by npm run dev/preview)
@@ -71,7 +71,7 @@ src/
   sim/                the simulation, without any drawing (runs on the server, or in the browser)
     simulation.js     one world: tick, snapshot for viewers, save and load
     brain.js          making choices (rules or language model), walking routes, arriving and finishing
-    acts.js           needs and all activities (scores, texts)
+    acts.js           all activities (texts, and time-of-day scores for the rules)
     catalog.js        activity descriptions for the language model
     cat.js            where Biscuit goes and what she does
     garden.js         how big the plants are
@@ -88,9 +88,9 @@ server/
 The world is built in a fixed order (`world/index.js`) because trees, stones and clouds use a seeded random. That way the village looks the same on every start.
 
 - **World**: CloClo's house, bakery, library, post office, ice cream stand, park with a swing, pond with ducks, vegetable garden, flower meadow with butterflies, a lookout hill with a telescope, and a square with a fountain. With a day/night cycle. Biscuit the cat strolls around the square and naps by the fountain at night.
-- **Brain**: five needs (full tummy, energy, fun, curiosity, company) that slowly drop. Claude Haiku 5.5 decides freely what he does and for how long, with his needs, the hour, his diary and his own plan as context. Without the model he uses a utility score based on his needs and the hour, plus some randomness, and avoids repeating what he just did. Fourteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
-- **CloClo**: his face shows his mood (smile or frown, eyebrows, rosy cheeks), his eyes glance around, his tail wags when he is happy, he hops when he arrives somewhere, and he carries a lantern after dark. Hearts, music notes, stars and z's float up while he does things he enjoys.
-- **Display**: a thought bubble, a diary, need bars, how many people are watching, and a camera you can rotate and zoom. The local copy also has speed 1×, 5× or 20×.
+- **Brain**: no needs or stats. Claude Haiku 5.5 decides freely what he does, for how long and how he feels, with the hour, his diary and his own plan as context. Without the model, simple rules pick something that suits the time of day (meals at mealtimes, stargazing in the evening, sleep at night) and avoid repeats. Fourteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
+- **CloClo**: his face shows the mood the brain chose (smile or frown, eyebrows, rosy cheeks, sleepy eyes), his eyes glance around, his tail wags when he is happy, he hops when he arrives somewhere, and he carries a lantern after dark. Hearts, music notes, stars and z's float up while he does things he enjoys.
+- **Display**: a thought bubble, what he is doing, feeling and planning, a diary, how many people are watching, and a camera you can rotate and zoom. The local copy also has speed 1×, 5× or 20×.
 
 ## Next steps
 
