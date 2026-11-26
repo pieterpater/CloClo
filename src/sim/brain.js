@@ -31,7 +31,8 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
   const S = {
     mode: 'choosing', act: null, left: 0, queue: [],
     here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
-    last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null
+    last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null,
+    minutes: null, plan: ''
   };
   clo.position.copy(LOC.home.spot);
   S.face = LOC.home.rot;
@@ -86,19 +87,22 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.mode = 'thinking';
     S.thought = 'Hmm… what shall I do next?';
     Promise.resolve(opts.decide({
-      time: dayLabel(world.T), hour: h,
+      time: dayLabel(world.T), hour: h, plan: S.plan,
       previous: S.prev, needs: need, last: S.last, diary: memory,
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
       const now = hour();
-      if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary);
+      if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary, out);
       else start(ruleChoice(now));
     });
   }
 
-  // Set off to do `best`. `thought` and `diary` come from the language model, if it answered.
-  function start(best, thought, diary) {
+  // Set off to do `best`. `thought` and `diary` come from the language model, if it answered;
+  // so can `llm.minutes` (how long he does it) and `llm.plan` (a note to himself for later).
+  function start(best, thought, diary, llm) {
+    S.minutes = llm ? llm.minutes : null;
+    if (llm) S.plan = llm.plan || '';
     // a diary line about what he just finished
     const prev = S.prev && ACTS[S.prev];
     if (diary) write(diary);
@@ -124,7 +128,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
   function arrive() {
     const a = ACTS[S.act];
     S.mode = 'doing';
-    S.left = a.dur(hour());
+    S.left = S.minutes || a.dur(hour());
     S.face = S.tgt.face;
     S.tNext = world.T + 8;
     if (a.inside) {

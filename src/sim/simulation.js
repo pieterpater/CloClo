@@ -44,7 +44,7 @@ export function createSimulation(opts = {}) {
       t: Date.now(), T: r2(world.T), speed: world.speed,
       clo: {
         x: r2(p.x), y: r2(p.y), z: r2(p.z), face: r2(S.face), visible: body.visible, item: body.item,
-        mode: S.mode, act: S.act, thought: S.thought,
+        mode: S.mode, act: S.act, thought: S.thought, plan: S.plan,
         anchor: S.anchor ? [S.anchor.x, S.anchor.y, S.anchor.z] : null,
         hop: hopN, wow: wowN
       },
@@ -64,7 +64,7 @@ export function createSimulation(opts = {}) {
     const S = brain.S;
     return {
       version: 1, T: world.T, need: brain.need, growth: garden.growth, diary, memory: brain.memory,
-      last: S.last, prev: S.act, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
+      last: S.last, prev: S.act, plan: S.plan, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
       pos: body.position.toArray(), cat: cat.pos.toArray()
     };
   }
@@ -78,6 +78,7 @@ export function createSimulation(opts = {}) {
     brain.memory.splice(0, brain.memory.length, ...d.memory);
     S.last = d.last;
     S.prev = d.prev;
+    S.plan = d.plan || '';
     S.here = { ang: d.here.ang, pts: d.here.pts.map(a => new THREE.Vector3().fromArray(a)) };
     body.position.fromArray(d.pos);
     body.visible = true;

@@ -23,7 +23,7 @@ export function setupHud() {
   needsEl.innerHTML = NEEDS.map(([k, l, c]) => `<div class="need"><span>${l}</span><div class="bar"><i id="b-${k}" style="background:${c}"></i></div><em id="v-${k}"></em></div>`).join('');
 }
 
-const viewersEl = document.getElementById('viewers');
+const viewersEl = document.getElementById('viewers'), planEl = document.getElementById('nowPlan');
 
 // Clock, viewers, need bars and "currently doing".
 export function updateHud(need, S, viewers, connected) {
@@ -41,6 +41,8 @@ export function updateHud(need, S, viewers, connected) {
     ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
     : a.txt;
   nowLoc.textContent = L.name;
+  planEl.hidden = !S.plan;
+  planEl.textContent = S.plan ? 'Plan: ' + S.plan : '';
 }
 
 const up = new THREE.Vector3(0, 2.4, 0);

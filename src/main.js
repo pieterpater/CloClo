@@ -64,6 +64,7 @@ async function start(renderer) {
     V.mode = c.mode;
     V.act = c.act;
     V.thought = c.thought;
+    V.plan = c.plan;
     V.anchor = c.anchor ? anchor.fromArray(c.anchor) : null;
     // while dancing or chasing butterflies he spins on his own (see animate.js)
     if (!(c.mode === 'doing' && (c.act === 'dance' || c.act === 'butterflies'))) V.face = c.face;

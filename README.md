@@ -29,7 +29,7 @@ Without the server (static hosting, or the server can't be reached) the page run
 
 ### The language-model brain
 
-With an API key, CloClo's choices, the thought he sets off with, and his diary lines are written by **Claude Haiku 5.5**. The server calls Claude each time CloClo finishes something; the key never reaches the browser.
+With an API key, **Claude Haiku 5.5** decides what CloClo does next and for how long, writes the thought he sets off with and his diary lines, and keeps a short plan for later (shown under what he is doing). His needs are only information for the model, not orders: it may let him read on while hungry or stay up for the stars. Opening hours still apply. The server calls Claude each time CloClo finishes something; the key never reaches the browser.
 
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env   # .env is git-ignored (used by npm run dev/preview)
@@ -88,7 +88,7 @@ server/
 The world is built in a fixed order (`world/index.js`) because trees, stones and clouds use a seeded random. That way the village looks the same on every start.
 
 - **World**: CloClo's house, bakery, library, post office, ice cream stand, park with a swing, pond with ducks, vegetable garden, flower meadow with butterflies, a lookout hill with a telescope, and a square with a fountain. With a day/night cycle. Biscuit the cat strolls around the square and naps by the fountain at night.
-- **Brain**: five needs (full tummy, energy, fun, curiosity, company) that slowly drop. Claude Haiku 5.5 picks his next activity from his needs, the hour, his recent activities and diary, and writes his thoughts and diary. Without the model he uses a utility score based on his needs and the hour, plus some randomness, and avoids repeating what he just did. Fourteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
+- **Brain**: five needs (full tummy, energy, fun, curiosity, company) that slowly drop. Claude Haiku 5.5 decides freely what he does and for how long, with his needs, the hour, his diary and his own plan as context. Without the model he uses a utility score based on his needs and the hour, plus some randomness, and avoids repeating what he just did. Fourteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
 - **CloClo**: his face shows his mood (smile or frown, eyebrows, rosy cheeks), his eyes glance around, his tail wags when he is happy, he hops when he arrives somewhere, and he carries a lantern after dark. Hearts, music notes, stars and z's float up while he does things he enjoys.
 - **Display**: a thought bubble, a diary, need bars, how many people are watching, and a camera you can rotate and zoom. The local copy also has speed 1×, 5× or 20×.
 
