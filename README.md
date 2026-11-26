@@ -29,7 +29,7 @@ Without the server (static hosting, or the server can't be reached) the page run
 
 ### The language-model brain
 
-With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. At the block yard it also designs what he builds. At bedtime it writes a short summary of his day in his own words; he remembers his last 7 days, so he can continue projects and remember friends. He has no needs or stats; only opening hours limit what he can do.
+With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, a few things he says while he is busy, his diary lines, and a short plan for later. At the block yard it also designs what he builds. At bedtime it writes a short summary of his day in his own words; he remembers his last 7 days, so he can continue projects and remember friends. He has no needs or stats; only opening hours limit what he can do.
 
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env   # .env is git-ignored (used by npm run dev/preview)

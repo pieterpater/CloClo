@@ -9,6 +9,13 @@ import { yard, applyStep, rulesPlan, describeYard, blockCount } from './blocks.j
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
 // decides freely, and without it simple rules pick something that suits the time of day.
 // Modes: 'choosing' → ('thinking' while the language model answers) → 'walking' → 'doing' → 'choosing' …
+// Small things he says at fixed moments; picked so that the same line doesn't come twice in a row.
+const DECIDING = ['Hmm… what shall I do next?', 'What now, what now…', 'Let me think…', 'Ooh, I have an idea… wait.', 'So many things to do!', 'Where shall I go?'];
+const DESIGNING = ['Hmm… what shall I build?', 'Something tall? Something round?', 'I need a good idea…', 'Let me look at my blocks…'];
+const FINISHED = ['Ta-da!', 'I made this!', 'Look at it!', 'Not bad at all!', 'My best one yet?', 'Finished!'];
+const BITES = ['A bite!', 'Ooh, a tug!', 'Something’s pulling!', 'Fish!'];
+const CATCHES = ['Caught a fish! I put it back, it looked so sad.', 'A tiny silver fish! I let it swim home.', 'I caught a fish and said sorry, then let it go.', 'A fish with a funny face! Back you go.', 'I caught a fish. We looked at each other. I let it go.'];
+
 // Sometimes a letter from Grandma is waiting when he wakes up.
 const GRANDMA = [
   'A letter from Grandma on the doormat! She says hi to the ducks.',
@@ -43,6 +50,12 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
   };
   clo.position.copy(LOC.home.spot);
   S.face = LOC.home.rot;
+
+  // a random line, but not the one he just said
+  const pickNew = (list, avoid = S.thought) => {
+    const fresh = list.filter(l => l !== avoid);
+    return pick(fresh.length ? fresh : list);
+  };
 
   // Routes run via a ring around the square.
   const RING = 4.4, ring = a => new THREE.Vector3(Math.cos(a) * RING, 0, Math.sin(a) * RING);
@@ -92,7 +105,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     if (!opts.decide || !opts.canDecide()) return start(ruleChoice(h));
     // ask the language model; meanwhile CloClo stands and ponders
     S.mode = 'thinking';
-    S.thought = 'Hmm… what shall I do next?';
+    S.thought = pickNew(DECIDING);
     Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h, plan: S.plan,
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories,
@@ -109,6 +122,8 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
   // so can `llm.minutes` (how long he does it), `llm.mood` (how he feels) and `llm.plan` (a note to himself for later).
   function start(best, thought, diary, llm) {
     S.minutes = llm ? llm.minutes : null;
+    S.musings = llm && llm.musings && llm.musings.length ? llm.musings.slice() : null;
+    S.musingSet = S.musings ? S.musings.slice() : null;
     // a nap in the daytime stays a nap
     const h = hour();
     if (best === 'sleep' && !(h >= 19.5 || h < 6.5)) S.minutes = Math.min(S.minutes || 60, 90);
@@ -201,7 +216,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.tNext = world.T + 1e9;
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(rulesPlan());
-    S.thought = 'Hmm… what shall I build?';
+    S.thought = pickNew(DESIGNING);
     const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
@@ -240,7 +255,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     b.steps = null;
     S.build = null;
     S.left = 8;
-    S.thought = pick(['Ta-da!', 'I made this!', 'Look at it!']);
+    S.thought = pickNew(FINISHED);
     S.face = S.tgt.face;
     S.tNext = world.T + 4;
   }
@@ -279,13 +294,19 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
       if (S.act === 'gardening') garden.growth = Math.min(1.6, garden.growth + gd * .004);
       if (S.act === 'build') stepBuild(gd);
       if (S.act === 'fish' && Math.random() < gd * .012) {
-        S.thought = 'A bite!';
+        S.thought = pickNew(BITES);
         S.wow = true;
-        write('Caught a fish! I put it back, it looked so sad.');
+        write(pickNew(CATCHES, S.lastCatch));
+        S.lastCatch = memory[0];
         S.tNext = world.T + 6;
       } else if (world.T > S.tNext) {
-        S.thought = pick(a.mid);
-        S.tNext = world.T + 14 + Math.random() * 12;
+        // his own musings from the language model first; once they're all said, he repeats one now and
+        // then (never the same twice in a row) and talks less; without the model, the activity's lines
+        const fresh = S.musings && S.musings.length;
+        S.thought = fresh ? S.musings.shift() : pickNew(S.musingSet || a.mid);
+        // asleep, time runs fast (see simulation.js), so he mumbles much less often
+        const gap = S.act === 'sleep' ? 70 + Math.random() * 50 : fresh || !S.musingSet ? 14 + Math.random() * 12 : 30 + Math.random() * 25;
+        S.tNext = world.T + gap;
       }
       if (S.left <= 0) finish();
     }

@@ -29,6 +29,7 @@ Reply with JSON:
 - thought: what he thinks as he sets off (at most 70 characters, first person).
 - mood: how he feels as he sets off: delighted, happy, calm, sleepy, grumpy or sad (sad is never more than a small sigh). It shows on his face.
 - plan: a short note to himself about what he'd like to do later, or "" (at most 80 characters). You'll see it again next time; you can keep it, change it or drop it.
+- musings: three short things he thinks or says while he is doing it (each at most 50 characters). Make them specific to this moment and different from his recent diary, never generic.
 Write in English.`;
 
 const SCHEMA = {
@@ -39,9 +40,10 @@ const SCHEMA = {
     minutes: { type: 'integer' },
     mood: { type: 'string', enum: MOODS },
     thought: { type: 'string' },
-    plan: { type: 'string' }
+    plan: { type: 'string' },
+    musings: { type: 'array', items: { type: 'string' } }
   },
-  required: ['diary', 'activity', 'minutes', 'thought', 'mood', 'plan'],
+  required: ['diary', 'activity', 'minutes', 'thought', 'mood', 'plan', 'musings'],
   additionalProperties: false
 };
 
@@ -123,6 +125,7 @@ export async function decide(state) {
     thought: clean(out.thought, 100),
     diary: clean(out.diary, 130),
     plan: clean(out.plan, 120),
+    musings: (Array.isArray(out.musings) ? out.musings : []).map(m => clean(m, 70)).filter(Boolean).slice(0, 4),
     mood: MOODS.includes(out.mood) ? out.mood : 'happy',
     minutes: Math.max(5, Math.min(out.activity === 'sleep' ? 660 : 600, Math.round(Number(out.minutes) || 30))),
     usage: used
