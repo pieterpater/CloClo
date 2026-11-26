@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // Relatieve paden, zodat de build ook vanuit een submap (bijv. GitHub Pages) werkt.
+  // Relative paths, so the build also works from a subfolder (e.g. GitHub Pages).
   base: './',
-  // Three.js alleen is al ~500 kB; dat is voor nu prima.
+  // Three.js alone is ~500 kB; that is fine for now.
   build: { chunkSizeWarningLimit: 800 }
 });

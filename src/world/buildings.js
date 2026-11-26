@@ -20,19 +20,19 @@ function building(L) {
 }
 
 export function buildBuildings() {
-  // huis met schoorsteen
-  const gh = building(LOC.huis);
-  mesh(box(.6, 1.6, .6), mat(0xb5838d), 1.2, LOC.huis.b.h + 1.6, -.6, gh);
+  // house with chimney
+  const house = building(LOC.home);
+  mesh(box(.6, 1.6, .6), mat(0xb5838d), 1.2, LOC.home.b.h + 1.6, -.6, house);
 
-  // bakkerij met luifel en uithangbord
-  const gb = building(LOC.bakkerij);
-  const aw = mesh(box(5.6, .15, 1.4), mat(0xff8fab), 0, 2.55, 2.85, gb);
+  // bakery with awning and sign
+  const bakery = building(LOC.bakery);
+  const aw = mesh(box(5.6, .15, 1.4), mat(0xff8fab), 0, 2.55, 2.85, bakery);
   aw.rotation.x = .35;
-  mesh(new THREE.CylinderGeometry(.7, .7, .1, 16), mat(0xffffff), 2.2, 1, 4.3, gb);
-  mesh(new THREE.CylinderGeometry(.08, .08, 1, 6), mat(0x8a5a3b), 2.2, .5, 4.3, gb);
+  mesh(new THREE.CylinderGeometry(.7, .7, .1, 16), mat(0xffffff), 2.2, 1, 4.3, bakery);
+  mesh(new THREE.CylinderGeometry(.08, .08, 1, 6), mat(0x8a5a3b), 2.2, .5, 4.3, bakery);
 
-  // bibliotheek met zuilen en trap
-  const gl = building(LOC.bieb);
-  for (const x of [-1.4, 1.4]) mesh(new THREE.CylinderGeometry(.22, .22, 3.4, 10), mat(0xffffff), x, 1.7, 2.9, gl);
-  mesh(box(4, .25, 1), mat(0xd6d0c4), 0, .12, 3, gl);
+  // library with columns and steps
+  const library = building(LOC.library);
+  for (const x of [-1.4, 1.4]) mesh(new THREE.CylinderGeometry(.22, .22, 3.4, 10), mat(0xffffff), x, 1.7, 2.9, library);
+  mesh(box(4, .25, 1), mat(0xd6d0c4), 0, .12, 3, library);
 }

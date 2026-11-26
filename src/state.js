@@ -1,4 +1,4 @@
-// Gedeelde simulatietijd. T = minuten sinds dag 1, 00:00.
+// Shared simulation time. T = minutes since day 1, 00:00.
 export const world = { T: 7 * 60 + 30, speed: 1 };
 
 export const hour = () => (world.T % 1440) / 60;

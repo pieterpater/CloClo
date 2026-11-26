@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat } from '../helpers.js';
 
-// Het 3D-model van CloClo. `clo` is de hele figuur, `body` alles behalve de voetjes.
+// CloClo's 3D model. `clo` is the whole figure, `body` everything except the feet.
 export function buildCloClo() {
   const clo = new THREE.Group();
   scene.add(clo);
@@ -25,7 +25,7 @@ export function buildCloClo() {
     eyes.push(e);
   }
 
-  // hoorntjes
+  // little horns
   for (const s of [-1, 1]) {
     const h = mesh(new THREE.ConeGeometry(.14, .45, 10), new THREE.MeshStandardMaterial({ color: 0xffd166, roughness: .5 }), s * .42, 1.78, 0, body);
     h.rotation.z = -s * .35;
@@ -47,7 +47,7 @@ export function buildCloClo() {
     return a;
   });
 
-  // spullen in zijn rechterhand
+  // items in his right hand
   const rod = new THREE.Group();
   arms[1].add(rod);
   mesh(new THREE.CylinderGeometry(.03, .03, 2.2, 5), mat(0x8a5a3b), 0, .7, .6, rod).rotation.x = .9;

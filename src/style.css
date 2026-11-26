@@ -1,8 +1,8 @@
-/* VOICE: speels, warm, als een natuurdocumentaire over een heel klein monster
-   IDEA: een live webcam op een miniatuurdorp, met CloClo's dagboek ernaast
-   PICTURE: het 3D-dorp Mosdorp vult het hele scherm, CloClo in beeld
-   COLOUR and TYPE: CloClo-turquoise, frisse witte grond, koraal voor LIVE; Fredoka + Nunito
-   LAYOUT: beeld links groot, zijpaneel met status, behoeften en dagboek; op telefoon eronder */
+/* VOICE: playful, warm, like a nature documentary about a very small monster
+   IDEA: a live webcam on a miniature village, with CloClo's diary beside it
+   PICTURE: the 3D village Mosdorp fills the whole screen, with CloClo in view
+   COLOUR and TYPE: CloClo turquoise, fresh white ground, coral for LIVE; Fredoka + Nunito
+   LAYOUT: large view on the left, side panel with status, needs and diary; stacked below on phones */
 :root{color-scheme:light dark;--bg:light-dark(#f3fbf9,#0e1d1b);--panel:light-dark(#ffffff,#152826);--ink:light-dark(#12302c,#e4f5f2);--soft:light-dark(#5b7a75,#9dbdb7);--line:light-dark(#dcefeb,#24403c);--teal:#3fbfb0;--coral:#ff6b6b}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}

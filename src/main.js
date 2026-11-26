@@ -38,8 +38,8 @@ function start(renderer) {
   let anim = 0, hudT = 0;
 
   function frame() {
-    const rd = Math.min(clock.getDelta(), .1); // echte seconden
-    const gd = rd * world.speed;               // spelminuten
+    const rd = Math.min(clock.getDelta(), .1); // real seconds
+    const gd = rd * world.speed;               // game minutes
     anim += rd;
     world.T += gd;
 

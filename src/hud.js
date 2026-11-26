@@ -22,7 +22,7 @@ export function setupHud() {
   needsEl.innerHTML = NEEDS.map(([k, l, c]) => `<div class="need"><span>${l}</span><div class="bar"><i id="b-${k}" style="background:${c}"></i></div><em id="v-${k}"></em></div>`).join('');
 }
 
-// Klok, behoeftebalken en "nu bezig met".
+// Clock, need bars and "currently doing".
 export function updateHud(need, S) {
   clockEl.textContent = dayLabel(world.T);
   for (const [k] of NEEDS) {
@@ -32,15 +32,15 @@ export function updateHud(need, S) {
   const a = ACTS[S.act];
   if (!a) return;
   const L = LOC[a.loc];
-  nowTxt.textContent = S.mode === 'lopen'
-    ? 'loopt naar ' + (a.loc === 'plein' ? 'het plein' : a.loc === 'huis' ? 'huis' : 'de ' + L.name.toLowerCase())
+  nowTxt.textContent = S.mode === 'walking'
+    ? 'loopt naar ' + (a.loc === 'square' ? 'het plein' : a.loc === 'home' ? 'huis' : 'de ' + L.name.toLowerCase())
     : a.txt;
   nowLoc.textContent = L.name;
 }
 
 const up = new THREE.Vector3(0, 2.4, 0);
 
-// Gedachtewolk boven CloClo's hoofd (of boven het gebouw waar hij binnen is).
+// Thought bubble above CloClo's head (or above the building he is in).
 export function updateBubble(stage, cloPos, S) {
   const anc = S.anchor ? S.anchor.clone() : cloPos.clone().add(up);
   anc.project(camera);

@@ -3,7 +3,7 @@ import { camera, sun, mobile } from './scene.js';
 import { world } from './state.js';
 import { clamp } from './helpers.js';
 
-// Orbitcamera rond CloClo (of het dorp), bediend met slepen, scrollen en knijpen.
+// Orbit camera around CloClo (or the village), controlled by dragging, scrolling and pinching.
 export const cam = { theta: .7, phi: .72, dist: mobile ? 26 : 22, follow: true, target: new THREE.Vector3() };
 
 export function setupControls(stage) {
@@ -65,7 +65,7 @@ export function setupControls(stage) {
 
 const tmp = new THREE.Vector3();
 
-// focus: CloClo's positie, of het punt boven het gebouw waar hij binnen is.
+// focus: CloClo's position, or the point above the building he is in.
 export function updateCamera(rd, cloPos, anchor) {
   const focus = cam.follow ? (anchor ? tmp.copy(anchor).setY(1) : cloPos) : tmp.set(0, 0, 0);
   cam.target.lerp(focus, Math.min(1, rd * 2.5));

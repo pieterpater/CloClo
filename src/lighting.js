@@ -7,7 +7,7 @@ import { starMat } from './world/sky.js';
 
 const cNight = new THREE.Color(0x17203b), cDay = new THREE.Color(0x9fd8ff), cDusk = new THREE.Color(0xffa987), sky = new THREE.Color();
 
-// Dag- en nachtritme: lucht, zon, ramen, lantaarns en sterren.
+// Day/night cycle: sky, sun, windows, street lamps and stars.
 export function updateLight(stage) {
   const h = hour(), a = (h - 6) / 12 * Math.PI, el = Math.sin(a);
   const k = THREE.MathUtils.smoothstep(el, -.15, .3), dusk = el > -.25 ? clamp(1 - Math.abs(el) / .3, 0, 1) : 0;

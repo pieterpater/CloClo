@@ -12,14 +12,14 @@ function tree(x, z, s) {
   else mesh(new THREE.IcosahedronGeometry(1.2 * s), mat(rnd() < .5 ? 0x52b788 : 0x74c69d), 0, 2.1 * s, 0, t);
 }
 
-// Afstand van een punt tot de weg naar plek L.
+// Distance from a point to the road leading to location L.
 const segD = (px, pz, L) => {
   const ux = -L.dir.x, uz = -L.dir.z, t = clamp(px * ux + pz * uz, 0, L.spot.length() + 2);
   return Math.hypot(px - ux * t, pz - uz * t);
 };
 
 export function buildTrees() {
-  // willekeurig verspreid, maar niet op wegen of gebouwen
+  // scattered at random, but not on roads or buildings
   let placed = 0;
   for (let i = 0; i < 260 && placed < 55; i++) {
     const a = rnd() * Math.PI * 2, r = 10 + rnd() * 34, x = Math.cos(a) * r, z = Math.sin(a) * r;
@@ -31,7 +31,7 @@ export function buildTrees() {
     }
     if (ok) { tree(x, z, .8 + rnd() * .6); placed++; }
   }
-  // drie vaste bomen in het park
+  // three fixed trees in the park
   for (const [lx, lz] of [[-4.5, -1], [4.5, -1], [0, -4.5]]) {
     const v = new THREE.Vector3(lx, 0, lz).applyAxisAngle(new THREE.Vector3(0, 1, 0), LOC.park.rot);
     tree(LOC.park.x + v.x, LOC.park.z + v.z, 1.1);

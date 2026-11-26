@@ -21,10 +21,10 @@ function label(text, x, y, z) {
   scene.add(s);
 }
 
-// Naambordjes pas tekenen als het lettertype geladen is.
+// Draw the name signs only once the font has loaded.
 export function buildLabels() {
   const mk = () => {
-    for (const k of ['huis', 'bakkerij', 'bieb', 'park', 'vijver', 'tuin']) {
+    for (const k of ['home', 'bakery', 'library', 'park', 'pond', 'garden']) {
       const L = LOC[k], h = L.b ? L.b.h + 3.4 : k === 'park' ? 4.8 : 2.2;
       label(L.name, L.x, h, L.z);
     }

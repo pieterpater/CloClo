@@ -10,7 +10,7 @@ export function buildGround() {
   plaza.castShadow = false;
 }
 
-// Een weg van de rand van het plein naar elke plek.
+// A road from the edge of the square to each location.
 export function buildRoads() {
   for (const k in LOC) {
     const L = LOC[k];

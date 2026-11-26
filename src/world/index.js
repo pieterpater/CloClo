@@ -9,7 +9,7 @@ import { buildTrees } from './trees.js';
 import { buildSky, updateSky } from './sky.js';
 import { buildLabels } from './labels.js';
 
-// De volgorde is belangrijk: de seeded rnd() wordt in deze volgorde gebruikt.
+// Order matters: the seeded rnd() is consumed in this order.
 export function buildWorld() {
   buildGround();
   buildRoads();

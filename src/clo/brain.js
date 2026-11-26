@@ -5,25 +5,25 @@ import { LOC } from '../world/locations.js';
 import { garden } from '../world/garden.js';
 import { ACTS, DECAY } from './acts.js';
 
-// Het brein van CloClo: behoeften, keuzes en looproutes.
-// Modi: 'kiezen' → 'lopen' → 'doen' → 'kiezen' …
+// CloClo's brain: needs, choices and walking routes.
+// Modes: 'choosing' → 'walking' → 'doing' → 'choosing' …
 export function createBrain(model, write) {
   const { clo, rod, can } = model;
-  const need = { buik: 72, energie: 82, plezier: 55, nieuws: 65 };
+  const need = { fullness: 72, energy: 82, fun: 55, curiosity: 65 };
   const S = {
-    mode: 'kiezen', act: null, left: 0, queue: [],
-    here: { ang: LOC.huis.ang, pts: [LOC.huis.spot.clone()] },
+    mode: 'choosing', act: null, left: 0, queue: [],
+    here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
     last: [], face: 0, thought: 'Goeiemorgen!', tNext: 0, anchor: null
   };
-  clo.position.copy(LOC.huis.spot);
-  clo.rotation.y = LOC.huis.rot;
+  clo.position.copy(LOC.home.spot);
+  clo.rotation.y = LOC.home.rot;
 
-  // Routes lopen via een ring rond het plein.
+  // Routes run via a ring around the square.
   const RING = 4.4, ring = a => new THREE.Vector3(Math.cos(a) * RING, 0, Math.sin(a) * RING);
 
   function targetFor(a) {
     const L = LOC[a.loc];
-    if (a.loc === 'plein') {
+    if (a.loc === 'square') {
       const ang = Math.random() * Math.PI * 2;
       const p = new THREE.Vector3(Math.cos(ang) * 3, 0, Math.sin(ang) * 3);
       return { ang, pts: [p], face: Math.atan2(-p.x, -p.z), L };
@@ -59,14 +59,14 @@ export function createBrain(model, write) {
     S.here = { ang: tgt.ang, pts: tgt.pts };
     S.thought = pick(a.why);
     write(S.thought);
-    S.mode = 'lopen';
+    S.mode = 'walking';
     clo.visible = true;
     S.anchor = null;
   }
 
   function arrive() {
     const a = ACTS[S.act];
-    S.mode = 'doen';
+    S.mode = 'doing';
     S.left = a.dur(hour());
     S.face = S.tgt.face;
     S.tNext = world.T + 8;
@@ -75,8 +75,8 @@ export function createBrain(model, write) {
       const L = LOC[a.loc];
       S.anchor = new THREE.Vector3(L.x, L.b.h + 3.2, L.z);
     }
-    rod.visible = S.act === 'vissen';
-    can.visible = S.act === 'tuinieren';
+    rod.visible = S.act === 'fish';
+    can.visible = S.act === 'gardening';
   }
 
   function finish() {
@@ -85,19 +85,19 @@ export function createBrain(model, write) {
     rod.visible = can.visible = false;
     clo.visible = true;
     S.anchor = null;
-    if (S.act === 'schommelen') clo.position.copy(LOC.park.spot);
-    S.mode = 'kiezen';
+    if (S.act === 'swing') clo.position.copy(LOC.park.spot);
+    S.mode = 'choosing';
   }
 
   const tmp = new THREE.Vector3();
 
-  // gd = verstreken spelminuten deze frame
+  // gd = game minutes elapsed this frame
   function update(gd) {
     for (const k in need) need[k] -= gd * DECAY[k];
-    if (S.mode === 'kiezen') choose();
-    else if (S.mode === 'lopen') {
+    if (S.mode === 'choosing') choose();
+    else if (S.mode === 'walking') {
       let step = 2.4 * gd;
-      need.energie -= gd * .03;
+      need.energy -= gd * .03;
       while (step > 0 && S.queue.length) {
         const p = S.queue[0];
         tmp.subVectors(p, clo.position);
@@ -107,12 +107,12 @@ export function createBrain(model, write) {
         else { clo.position.addScaledVector(tmp, step / d); S.face = Math.atan2(tmp.x, tmp.z); step = 0; }
       }
       if (!S.queue.length) arrive();
-    } else if (S.mode === 'doen') {
+    } else if (S.mode === 'doing') {
       const a = ACTS[S.act];
       for (const k in a.eff) need[k] += a.eff[k] * gd;
       S.left -= gd;
-      if (S.act === 'tuinieren') garden.groei = Math.min(1.6, garden.groei + gd * .004);
-      if (S.act === 'vissen' && Math.random() < gd * .012) {
+      if (S.act === 'gardening') garden.growth = Math.min(1.6, garden.growth + gd * .004);
+      if (S.act === 'fish' && Math.random() < gd * .012) {
         S.thought = 'Beet!';
         write('Een vis gevangen! Ik heb hem teruggezet, hij keek zo verdrietig.');
         S.tNext = world.T + 6;
@@ -125,5 +125,5 @@ export function createBrain(model, write) {
     for (const k in need) need[k] = clamp(need[k], 0, 100);
   }
 
-  return { need, S, update, isSwinging: () => S.mode === 'doen' && S.act === 'schommelen' };
+  return { need, S, update, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
 }
