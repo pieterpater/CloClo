@@ -2,12 +2,12 @@ import * as THREE from 'three';
 
 // All locations in Mosdorp. `b` = building dimensions.
 export const LOC = {
-  home: { name: 'CloClo’s huis', x: -14, z: -8, b: { w: 5, d: 4.5, h: 3.6, wall: 0xffd6a5, roof: 0xe76f51 } },
-  bakery: { name: 'Bakkerij', x: 14, z: -8, b: { w: 5.5, d: 4.5, h: 3.4, wall: 0xfff1c1, roof: 0x9b5de5 } },
-  library: { name: 'Bibliotheek', x: 14, z: 10, b: { w: 6.5, d: 5, h: 4.6, wall: 0xcde7f0, roof: 0x277da1 } },
+  home: { name: 'CloClo’s house', x: -14, z: -8, b: { w: 5, d: 4.5, h: 3.6, wall: 0xffd6a5, roof: 0xe76f51 } },
+  bakery: { name: 'Bakery', x: 14, z: -8, b: { w: 5.5, d: 4.5, h: 3.4, wall: 0xfff1c1, roof: 0x9b5de5 } },
+  library: { name: 'Library', x: 14, z: 10, b: { w: 6.5, d: 5, h: 4.6, wall: 0xcde7f0, roof: 0x277da1 } },
   park: { name: 'Park', x: -14, z: 10 },
-  pond: { name: 'Vijver', x: 0, z: -20 },
-  garden: { name: 'Moestuin', x: 0, z: 20 }
+  pond: { name: 'Pond', x: 0, z: -20 },
+  garden: { name: 'Vegetable garden', x: 0, z: 20 }
 };
 
 // dir: direction towards the square; rot: rotation facing the square; spot: where CloClo stands; ang: angle around the square.
@@ -21,4 +21,4 @@ for (const k in LOC) {
   L.ang = Math.atan2(L.spot.z, L.spot.x);
 }
 
-LOC.square = { name: 'Plein', x: 0, z: 0 };
+LOC.square = { name: 'Square', x: 0, z: 0 };

@@ -7,4 +7,4 @@ export const fmt = t => {
   const m = Math.floor(t % 1440);
   return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 };
-export const dayLabel = t => 'Dag ' + (Math.floor(t / 1440) + 1) + ' · ' + fmt(t);
+export const dayLabel = t => 'Day ' + (Math.floor(t / 1440) + 1) + ' · ' + fmt(t);

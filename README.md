@@ -1,49 +1,49 @@
 # CloClo
 
-Een website waar je het leven van CloClo kunt volgen: een schattig monstertje dat als AI-agent zijn eigen leven leidt in Mosdorp, een klein 3D-stadje. Bezoekers kunnen alleen kijken. CloClo krijgt geen input en doet wat hij wil.
+A website where you can follow the life of CloClo: a cute little monster that lives his own life as an AI agent in Mosdorp, a small 3D village. Visitors can only watch. CloClo gets no input and does whatever he wants.
 
-## Ontwikkelen
+## Development
 
-Een Vite-project met Three.js (r128, uit npm).
+A Vite project with Three.js (r128, from npm).
 
 ```bash
 npm install
-npm run dev      # ontwikkelserver op http://localhost:5173
-npm run build    # productiebuild in dist/
-npm run preview  # bekijk de build lokaal
+npm run dev      # dev server at http://localhost:5173
+npm run build    # production build in dist/
+npm run preview  # preview the build locally
 ```
 
-### Structuur
+### Structure
 
 ```
-index.html            pagina-opmaak (HUD, zijpaneel)
+index.html            page markup (HUD, side panel)
 src/
-  main.js             renderer, opstart en de frame-loop
+  main.js             renderer, startup and the frame loop
   style.css
-  state.js            speltijd (T), tempo, klok-helpers
-  scene.js            scene, camera, zon en hemellicht
-  helpers.js          mesh/materiaal-helpers, seeded random
-  lighting.js         dag-en-nachtritme
-  controls.js         camera draaien/zoomen, knoppen
-  hud.js              klok, behoeftebalken, dagboek, gedachtewolk
-  world/              Mosdorp: plekken, wegen, gebouwen, park, vijver,
-                      moestuin, fontein, lantaarns, bomen, lucht, naambordjes
+  state.js            game time (T), speed, clock helpers
+  scene.js            scene, camera, sun and hemisphere light
+  helpers.js          mesh/material helpers, seeded random
+  lighting.js         day/night cycle
+  controls.js         camera orbit/zoom, buttons
+  hud.js              clock, need bars, diary, thought bubble
+  world/              Mosdorp: locations, roads, buildings, park, pond,
+                      vegetable garden, fountain, street lamps, trees, sky, name signs
   clo/
-    model.js          het 3D-model van CloClo
-    acts.js           behoeften en alle activiteiten (scores, teksten)
-    brain.js          keuzes maken, looproutes, aankomen en afronden
-    animate.js        CloClo's bewegingen per activiteit
+    model.js          CloClo's 3D model
+    acts.js           needs and all activities (scores, texts)
+    brain.js          making choices, walking routes, arriving and finishing
+    animate.js        CloClo's movements per activity
 ```
 
-De wereld wordt in een vaste volgorde opgebouwd (`world/index.js`), omdat bomen, stenen en wolken een seeded random gebruiken. Zo ziet het dorp er bij elke start hetzelfde uit.
+The world is built in a fixed order (`world/index.js`) because trees, stones and clouds use a seeded random. That way the village looks the same on every start.
 
-- **Wereld**: huis, bakkerij, bibliotheek, park met schommel, vijver met eendjes, moestuin en een plein met fontein. Met dag-en-nachtritme.
-- **Brein**: vier behoeften (buikje vol, energie, plezier, nieuwsgierigheid) die langzaam dalen. CloClo kiest zijn volgende bezigheid met een utility-score op basis van zijn behoeften en het uur, plus wat toeval.
-- **Weergave**: een tekstwolk met zijn gedachten, een dagboek, behoeftebalken, een camera die je kunt draaien en zoomen, en tempo 1×, 5× of 20×.
+- **World**: house, bakery, library, park with a swing, pond with ducks, vegetable garden and a square with a fountain. With a day/night cycle.
+- **Brain**: four needs (full tummy, energy, fun, curiosity) that slowly drop. CloClo picks his next activity with a utility score based on his needs and the hour, plus some randomness.
+- **Display**: a thought bubble, a diary, need bars, a camera you can rotate and zoom, and speed 1×, 5× or 20×.
 
-## Volgende stappen
+## Next steps
 
-1. **Server-side simulatie**: de wereld draait 24/7 op een server, en bezoekers krijgen de toestand via WebSockets, zodat iedereen hetzelfde ziet.
-2. **Taalmodel als brein**: elke paar minuten een beslissing op hoog niveau, met geheugen en dagboek. De spellogica regelt het lopen en de animaties.
-3. **Moderatie** van alle tekst die publiek getoond wordt.
-4. **Betere 3D-modellen** (Blender of assetpakketten) en meer gebeurtenissen: weer, seizoenen en toevallige voorvallen.
+1. **Server-side simulation**: the world runs 24/7 on a server, and visitors receive the state over WebSockets, so everyone sees the same thing.
+2. **Language model as the brain**: a high-level decision every few minutes, with memory and a diary. The game logic handles walking and animations.
+3. **Moderation** of all text shown publicly.
+4. **Better 3D models** (Blender or asset packs) and more events: weather, seasons and random happenings.

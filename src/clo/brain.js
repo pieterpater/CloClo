@@ -13,7 +13,7 @@ export function createBrain(model, write) {
   const S = {
     mode: 'choosing', act: null, left: 0, queue: [],
     here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
-    last: [], face: 0, thought: 'Goeiemorgen!', tNext: 0, anchor: null
+    last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null
   };
   clo.position.copy(LOC.home.spot);
   clo.rotation.y = LOC.home.rot;
@@ -113,8 +113,8 @@ export function createBrain(model, write) {
       S.left -= gd;
       if (S.act === 'gardening') garden.growth = Math.min(1.6, garden.growth + gd * .004);
       if (S.act === 'fish' && Math.random() < gd * .012) {
-        S.thought = 'Beet!';
-        write('Een vis gevangen! Ik heb hem teruggezet, hij keek zo verdrietig.');
+        S.thought = 'A bite!';
+        write('Caught a fish! I put it back, it looked so sad.');
         S.tNext = world.T + 6;
       } else if (world.T > S.tNext) {
         S.thought = pick(a.mid);

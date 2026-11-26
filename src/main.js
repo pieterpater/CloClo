@@ -16,7 +16,7 @@ let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ antialias: true });
 } catch (e) {
-  stage.insertAdjacentHTML('beforeend', '<div class="err">Je browser ondersteunt geen WebGL, dus het 3D-dorp kan niet getoond worden.</div>');
+  stage.insertAdjacentHTML('beforeend', '<div class="err">Your browser doesn’t support WebGL, so the 3D village can’t be shown.</div>');
 }
 
 if (renderer) start(renderer);
@@ -32,7 +32,7 @@ function start(renderer) {
   const brain = createBrain(model, write);
   setupControls(stage);
   setupHud();
-  write('Goeiemorgen Mosdorp! Wat zal ik vandaag eens doen?');
+  write('Good morning, Mosdorp! What shall I do today?');
 
   const clock = new THREE.Clock();
   let anim = 0, hudT = 0;

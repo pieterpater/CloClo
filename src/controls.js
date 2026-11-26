@@ -52,14 +52,14 @@ export function setupControls(stage) {
     cam.follow = !cam.follow;
     cam.dist = cam.follow ? (mobile ? 26 : 22) : 62;
     cam.phi = cam.follow ? .72 : .95;
-    camBtn.textContent = cam.follow ? 'Overzicht' : 'Volg CloClo';
+    camBtn.textContent = cam.follow ? 'Overview' : 'Follow CloClo';
   });
 
   const spBtn = document.getElementById('speed');
   const SP = [1, 5, 20];
   spBtn.addEventListener('click', () => {
     world.speed = SP[(SP.indexOf(world.speed) + 1) % SP.length];
-    spBtn.textContent = 'Tempo ' + world.speed + '×';
+    spBtn.textContent = 'Speed ' + world.speed + '×';
   });
 }
 

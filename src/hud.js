@@ -33,7 +33,7 @@ export function updateHud(need, S) {
   if (!a) return;
   const L = LOC[a.loc];
   nowTxt.textContent = S.mode === 'walking'
-    ? 'loopt naar ' + (a.loc === 'square' ? 'het plein' : a.loc === 'home' ? 'huis' : 'de ' + L.name.toLowerCase())
+    ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
     : a.txt;
   nowLoc.textContent = L.name;
 }
