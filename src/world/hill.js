@@ -18,7 +18,7 @@ export function buildHill() {
     pos.setY(i, Math.hypot(x, z) < HILL.r ? heightAt(L.x + x, L.z + z) + .02 : -.1);
   }
   geo.computeVertexNormals();
-  const hill = mesh(geo, mat(0x86c873), L.x, 0, L.z);
+  const hill = mesh(geo, mat(0x6aab58), L.x, 0, L.z);
   hill.castShadow = false;
 
   // the props stand on the slope: each one at the ground height where it is

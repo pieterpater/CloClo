@@ -13,6 +13,7 @@ import { buildLamps } from './lamps.js';
 import { buildTrees } from './trees.js';
 import { buildSky, updateSky } from './sky.js';
 import { buildLabels } from './labels.js';
+import { buildDetails, updateDetails } from './details.js';
 
 // Order matters: the seeded rnd() is consumed in this order.
 export function buildWorld() {
@@ -31,11 +32,13 @@ export function buildWorld() {
   buildLamps();
   buildTrees();
   buildSky();
+  buildDetails(); // after the trees and clouds, so their places don't change
   buildLabels();
 }
 
 // Draws the moving parts of the world; growth and cat come from the simulation.
-export function updateWorld({ anim, rd, swinging, chaseAt, growth, cat, yard }) {
+export function updateWorld({ anim, rd, swinging, chaseAt, growth, cat, yard, isNight }) {
+  updateDetails(anim, rd, isNight);
   updateBlockYard(yard, anim);
   updateGarden(growth);
   updatePark(anim, rd, swinging);

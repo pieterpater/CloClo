@@ -83,7 +83,7 @@ async function start(renderer) {
 
     const isNight = isNightAt(hour());
     const doing = c.mode === 'doing';
-    updateWorld({ anim, rd, swinging: doing && c.act === 'swing', chaseAt: doing && c.act === 'butterflies' ? model.clo.position : null, growth: view.growth, cat: view.cat, yard: view.yard });
+    updateWorld({ anim, rd, swinging: doing && c.act === 'swing', chaseAt: doing && c.act === 'butterflies' ? model.clo.position : null, growth: view.growth, cat: view.cat, yard: view.yard, isNight });
     animateCloClo(model, V, anim, rd, view.mood, isNight);
     updateParticles(rd);
     updateLight(stage);

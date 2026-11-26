@@ -13,7 +13,7 @@ export function buildMeadow() {
   g.position.set(L.x, 0, L.z);
   g.rotation.y = L.rot;
   scene.add(g);
-  const patch = mesh(new THREE.CircleGeometry(4, 28), mat(0x74c69d), 0, .015, 0, g);
+  const patch = mesh(new THREE.CircleGeometry(4, 28), mat(0x5fa86f), 0, .015, 0, g);
   patch.rotation.x = -Math.PI / 2;
   patch.castShadow = false;
   const colours = [0xff8fab, 0xffd166, 0xffffff, 0xbde0fe, 0xc77dff];

@@ -5,7 +5,7 @@ import { clamp, winMat, bulbMat } from './helpers.js';
 import { lamps } from './world/lamps.js';
 import { starMat } from './world/sky.js';
 
-const cNight = new THREE.Color(0x17203b), cDay = new THREE.Color(0x9fd8ff), cDusk = new THREE.Color(0xffa987), sky = new THREE.Color();
+const cNight = new THREE.Color(0x17203b), cDay = new THREE.Color(0x86bfe3), cDusk = new THREE.Color(0xffa987), sky = new THREE.Color();
 
 // Day/night cycle: sky, sun, windows, street lamps and stars.
 export function updateLight(stage) {
@@ -18,8 +18,8 @@ export function updateLight(stage) {
   const sx = Math.cos(a) * -45, sy = Math.abs(el) * 55 + 8;
   sun.position.set(el > 0 ? sx : -sx, sy, 20);
   sun.color.set(el > 0 ? 0xfff4e0 : 0x9fb4ff);
-  sun.intensity = el > 0 ? .25 + .9 * k : .22;
-  hemi.intensity = .22 + .45 * k;
+  sun.intensity = el > 0 ? .2 + .55 * k : .2; // softer daylight: easier on the eyes
+  hemi.intensity = .2 + .3 * k;
   const n = 1 - k;
   winMat.emissiveIntensity = n * 1.2;
   bulbMat.emissiveIntensity = n * 1.6;

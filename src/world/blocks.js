@@ -20,7 +20,7 @@ export function buildBlockYard() {
   group.rotation.y = L.rot;
   scene.add(group);
   // sandy plot with a low wooden edge
-  const plot = mesh(box(SIZE * CELL + .6, .1, SIZE * CELL + .6), mat(0xf2d7a1), 0, .05, 0, group);
+  const plot = mesh(box(SIZE * CELL + .6, .1, SIZE * CELL + .6), mat(0xd2b787), 0, .05, 0, group);
   plot.castShadow = false;
   const edge = SIZE * CELL / 2 + .35;
   for (const s of [-1, 1]) {
