@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
-import { apiMiddleware } from './server/api.js';
+import { apiMiddleware, startSim } from './server/api.js';
 
 export default defineConfig(({ mode }) => {
   // Make ANTHROPIC_API_KEY from a local .env file available to the /api routes.
@@ -11,11 +11,11 @@ export default defineConfig(({ mode }) => {
     base: './',
     // Three.js alone is ~500 kB; that is fine for now.
     build: { chunkSizeWarningLimit: 800 },
-    // CloClo's language-model brain, also during `npm run dev` and `npm run preview`.
+    // The live world (one CloClo for everyone), also during `npm run dev` and `npm run preview`.
     plugins: [{
-      name: 'cloclo-brain',
-      configureServer: server => { server.middlewares.use(apiMiddleware); },
-      configurePreviewServer: server => { server.middlewares.use(apiMiddleware); }
+      name: 'cloclo-world',
+      configureServer: server => { startSim(); server.middlewares.use(apiMiddleware); },
+      configurePreviewServer: server => { startSim(); server.middlewares.use(apiMiddleware); }
     }]
   };
 });

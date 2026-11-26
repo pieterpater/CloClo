@@ -2,15 +2,16 @@ import * as THREE from 'three';
 import { camera } from './scene.js';
 import { world, dayLabel } from './state.js';
 import { LOC } from './world/locations.js';
-import { ACTS, NEEDS } from './clo/acts.js';
+import { ACTS, NEEDS } from './sim/acts.js';
 
 const diaryEl = document.getElementById('diary');
 
-export function write(txt) {
+// entry: { T: game time, text }
+export function write(entry) {
   const li = document.createElement('li');
   const tm = document.createElement('time');
-  tm.textContent = dayLabel(world.T);
-  li.append(tm, document.createTextNode(txt));
+  tm.textContent = dayLabel(entry.T);
+  li.append(tm, document.createTextNode(entry.text));
   diaryEl.prepend(li);
   while (diaryEl.children.length > 40) diaryEl.lastChild.remove();
 }
@@ -22,9 +23,13 @@ export function setupHud() {
   needsEl.innerHTML = NEEDS.map(([k, l, c]) => `<div class="need"><span>${l}</span><div class="bar"><i id="b-${k}" style="background:${c}"></i></div><em id="v-${k}"></em></div>`).join('');
 }
 
-// Clock, need bars and "currently doing".
-export function updateHud(need, S) {
-  clockEl.textContent = dayLabel(world.T);
+const viewersEl = document.getElementById('viewers');
+
+// Clock, viewers, need bars and "currently doing".
+export function updateHud(need, S, viewers, connected) {
+  clockEl.textContent = connected ? dayLabel(world.T) : 'Reconnecting…';
+  viewersEl.hidden = !viewers;
+  viewersEl.textContent = viewers === 1 ? '1 watching' : viewers + ' watching';
   for (const [k] of NEEDS) {
     document.getElementById('b-' + k).style.width = need[k].toFixed(0) + '%';
     document.getElementById('v-' + k).textContent = need[k].toFixed(0);

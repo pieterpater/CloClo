@@ -2,13 +2,8 @@ import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, box } from '../helpers.js';
 
-// Biscuit, the village cat. She strolls around the square, naps by the fountain at night,
-// and comes over when CloClo wants to play.
-export const cat = { group: null, meetAt: null, lookAt: null };
-
-const RING = 4.4;
-let queue = [], idle = 0, face = 0, parts = null;
-const tmp = new THREE.Vector3();
+// Draws Biscuit, the village cat. Where she goes and what she does comes from the simulation (sim/cat.js).
+let group = null, parts = null;
 
 export function buildCat() {
   const g = new THREE.Group();
@@ -41,69 +36,21 @@ export function buildCat() {
   mesh(new THREE.SphereGeometry(.055, 8, 6), light, 0, .42, -.12, tail);
   g.position.set(4, 0, 3);
   scene.add(g);
-  cat.group = g;
+  group = g;
   parts = { body, head, legs, tail };
 }
 
-const ringPt = a => new THREE.Vector3(Math.cos(a) * RING, 0, Math.sin(a) * RING);
-
-// Walk via the ring around the fountain, like CloClo does.
-function path(to) {
-  const p = cat.group.position, a1 = Math.atan2(p.z, p.x), a2 = Math.atan2(to.z, to.x);
-  let d = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));
-  const q = [];
-  if (Math.abs(d) > .6) {
-    q.push(ringPt(a1));
-    const n = Math.ceil(Math.abs(d) / .35);
-    for (let i = 1; i <= n; i++) q.push(ringPt(a1 + d * i / n));
-  }
-  q.push(to.clone());
-  return q;
-}
-
-// CloClo calls Biscuit to a spot on the square; she looks at `lookAt` once there.
-export function catMeet(point, lookAt) {
-  cat.meetAt = point.clone();
-  cat.lookAt = lookAt.clone();
-  queue = path(point);
-}
-export function catRelease() {
-  cat.meetAt = cat.lookAt = null;
-  queue = [];
-  idle = 5;
-}
-export const catArrived = () => cat.meetAt && !queue.length;
-
-export function updateCat(gd, rd, anim, isNight) {
-  const g = cat.group;
-  if (!cat.meetAt && !queue.length) {
-    idle -= gd;
-    if (idle < 0 && !isNight) {
-      const a = Math.atan2(g.position.z, g.position.x) + (Math.random() - .5) * 2.4, r = 2.6 + Math.random() * 3.6;
-      queue = path(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
-      idle = 8 + Math.random() * 25;
-    } else if (idle < 0 && isNight) {
-      const a = Math.atan2(g.position.z, g.position.x);
-      queue = path(new THREE.Vector3(Math.cos(a) * 2.4, 0, Math.sin(a) * 2.4));
-      idle = 60;
-    }
-  }
-  let step = 3 * gd, walking = queue.length > 0;
-  while (step > 0 && queue.length) {
-    tmp.subVectors(queue[0], g.position);
-    tmp.y = 0;
-    const d = tmp.length();
-    if (d <= step) { g.position.copy(queue[0]); queue.shift(); step -= d; }
-    else { g.position.addScaledVector(tmp, step / d); face = Math.atan2(tmp.x, tmp.z); step = 0; }
-  }
-  if (!walking && cat.lookAt) face = Math.atan2(cat.lookAt.x - g.position.x, cat.lookAt.z - g.position.z);
-  let dr = face - g.rotation.y;
+// c: { x, z, face, walking, sleeping, meeting } from the simulation
+export function updateCat(c, rd, anim) {
+  const g = group;
+  g.position.set(c.x, 0, c.z);
+  let dr = c.face - g.rotation.y;
   dr = Math.atan2(Math.sin(dr), Math.cos(dr));
   g.rotation.y += dr * Math.min(1, rd * 6);
 
   // animation
   const { body, head, legs, tail } = parts;
-  const sleeping = isNight && !walking && !cat.meetAt;
+  const { walking, sleeping, meeting } = c;
   const w = anim * 12;
   legs.forEach(l => l.visible = !sleeping);
   legs.forEach((l, i) => l.rotation.x = walking ? Math.sin(w + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .6 : 0);
@@ -111,7 +58,7 @@ export function updateCat(gd, rd, anim, isNight) {
   body.scale.set(1, sleeping ? .75 : 1 + Math.sin(anim * 2) * .02, 1);
   body.rotation.x = sleeping ? .15 : 0;
   head.rotation.x = sleeping ? .5 : Math.sin(anim * .7) * .1;
-  head.rotation.y = sleeping ? .8 : cat.meetAt && !walking ? Math.sin(anim * 3) * .25 : Math.sin(anim * .4) * .3;
-  tail.rotation.z = Math.sin(anim * (cat.meetAt ? 6 : 2)) * (sleeping ? .1 : .45);
+  head.rotation.y = sleeping ? .8 : meeting && !walking ? Math.sin(anim * 3) * .25 : Math.sin(anim * .4) * .3;
+  tail.rotation.z = Math.sin(anim * (meeting ? 6 : 2)) * (sleeping ? .1 : .45);
   tail.rotation.x = sleeping ? 1.2 : 0;
 }

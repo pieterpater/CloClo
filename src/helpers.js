@@ -21,8 +21,7 @@ export function mesh(geo, m, x, y, z, parent) {
 // Note: the order in which the world is built determines the result.
 let seed = 7;
 export const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-export const pick = a => a[Math.floor(Math.random() * a.length)];
-export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+export { pick, clamp } from './sim/util.js';
 
 // Windows and lamps glow at night (see lighting.js).
 export const winMat = new THREE.MeshStandardMaterial({ color: 0x3d5a80, emissive: 0xffd27a, emissiveIntensity: 0, roughness: .4 });

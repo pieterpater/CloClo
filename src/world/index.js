@@ -32,12 +32,13 @@ export function buildWorld() {
   buildLabels();
 }
 
-export function updateWorld({ anim, rd, gd, swinging, chaseAt, isNight }) {
-  updateGarden(gd);
+// Draws the moving parts of the world; growth and cat come from the simulation.
+export function updateWorld({ anim, rd, swinging, chaseAt, growth, cat }) {
+  updateGarden(growth);
   updatePark(anim, rd, swinging);
   updatePond(anim);
   updateFountain(anim);
   updateMeadow(anim, rd, chaseAt);
-  updateCat(gd, rd, anim, isNight);
+  updateCat(cat, rd, anim);
   updateSky(rd);
 }

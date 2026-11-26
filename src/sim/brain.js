@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { world, hour, dayLabel } from '../state.js';
-import { pick, clamp } from '../helpers.js';
+import { pick, clamp } from './util.js';
 import { LOC, heightAt } from '../world/locations.js';
-import { garden } from '../world/garden.js';
-import { catMeet, catRelease } from '../world/cat.js';
+import { garden } from './garden.js';
 import { ACTS, DECAY } from './acts.js';
-import { shouldAsk, askLLM } from './llm.js';
 
 // CloClo's brain: needs, choices and walking routes.
 // Modes: 'choosing' → ('thinking' while the language model answers) → 'walking' → 'doing' → 'choosing' …
@@ -16,8 +14,12 @@ const GRANDMA = [
   'Grandma’s letter says she is knitting me a scarf. Yellow, my favourite!'
 ];
 
-export function createBrain(model, writeDiary) {
-  const { clo, items } = model;
+// body: where CloClo is ({ position, visible, item }); cat: Biscuit (sim/cat.js)
+// writeDiary(text): adds a line to his diary
+// opts.canDecide() / opts.decide(state): an optional language-model brain (see server/sim.js).
+//   decide resolves to { activity, thought, diary }, or null to let the rules decide.
+export function createBrain(body, cat, writeDiary, opts = {}) {
+  const clo = body;
   // the latest diary lines, newest first, to give the language model some memory
   const memory = [];
   const write = txt => {
@@ -32,7 +34,7 @@ export function createBrain(model, writeDiary) {
     last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null
   };
   clo.position.copy(LOC.home.spot);
-  clo.rotation.y = LOC.home.rot;
+  S.face = LOC.home.rot;
 
   // Routes run via a ring around the square.
   const RING = 4.4, ring = a => new THREE.Vector3(Math.cos(a) * RING, 0, Math.sin(a) * RING);
@@ -79,15 +81,15 @@ export function createBrain(model, writeDiary) {
 
   function choose() {
     const h = hour();
-    if (!shouldAsk(world.speed)) return start(ruleChoice(h));
+    if (!opts.decide || !opts.canDecide()) return start(ruleChoice(h));
     // ask the language model; meanwhile CloClo stands and ponders
     S.mode = 'thinking';
     S.thought = 'Hmm… what shall I do next?';
-    askLLM({
+    Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h,
       previous: S.prev, needs: need, last: S.last, diary: memory,
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
-    }).then(out => {
+    })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
       const now = hour();
       if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary);
@@ -111,7 +113,7 @@ export function createBrain(model, writeDiary) {
     S.tgt = tgt;
     S.queue = route(S.here, tgt);
     S.here = { ang: tgt.ang, pts: tgt.pts };
-    if (tgt.cat) catMeet(tgt.cat, tgt.pts[0]);
+    if (tgt.cat) cat.meet(tgt.cat, tgt.pts[0]);
     S.thought = thought || pick(a.why);
     write(S.thought);
     S.mode = 'walking';
@@ -130,13 +132,13 @@ export function createBrain(model, writeDiary) {
       const L = LOC[a.loc];
       S.anchor = new THREE.Vector3(L.x, L.b.h + 3.2, L.z);
     } else S.hop = true;
-    for (const k in items) items[k].visible = k === a.item;
+    clo.item = a.item || null;
   }
 
   function finish() {
     S.prev = S.act;
-    if (S.act === 'cat') catRelease();
-    for (const k in items) items[k].visible = false;
+    if (S.act === 'cat') cat.release();
+    clo.item = null;
     clo.visible = true;
     S.anchor = null;
     if (S.act === 'swing') clo.position.copy(LOC.park.spot);
@@ -187,5 +189,5 @@ export function createBrain(model, writeDiary) {
     return v.reduce((a, b) => a + b, 0) / v.length * .6 + Math.min(...v) * .4;
   };
 
-  return { need, S, update, mood, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
+  return { need, S, memory, update, mood, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
 }

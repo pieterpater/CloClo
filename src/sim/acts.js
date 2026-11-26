@@ -1,5 +1,5 @@
 import { night } from '../state.js';
-import { garden } from '../world/garden.js';
+import { garden } from './garden.js';
 
 // Needs: [key, label, colour]
 export const NEEDS = [['fullness', 'Full tummy', '#ff9f1c'], ['energy', 'Energy', '#ffd166'], ['fun', 'Fun', '#ff6b6b'], ['curiosity', 'Curious', '#3fbfb0'], ['company', 'Company', '#c77dff']];

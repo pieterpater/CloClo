@@ -3,8 +3,8 @@ import { scene } from '../scene.js';
 import { mesh, mat, box } from '../helpers.js';
 import { LOC } from './locations.js';
 
-// growth: scale of the plants; CloClo makes them grow by watering them.
-export const garden = { growth: .6, plants: [] };
+// The plants are drawn here; how big they are comes from the simulation (sim/garden.js).
+const plants = [];
 
 export function buildGarden() {
   const g = new THREE.Group();
@@ -20,13 +20,11 @@ export function buildGarden() {
       mesh(new THREE.CylinderGeometry(.05, .05, .5, 5), mat(0x2d6a4f), 0, .25, 0, p);
       mesh(new THREE.IcosahedronGeometry(.25), mat(r === 1 ? 0xe63946 : r ? 0xf4a261 : 0x52b788), 0, .55, 0, p);
       p.scale.setScalar(.6);
-      garden.plants.push(p);
+      plants.push(p);
     }
   }
 }
 
-// Without water the plants shrink very slowly.
-export function updateGarden(gd) {
-  garden.growth = Math.max(.5, garden.growth - gd * .0004);
-  garden.plants.forEach((p, i) => p.scale.setScalar(garden.growth * (.9 + (i % 3) * .08)));
+export function updateGarden(growth) {
+  plants.forEach((p, i) => p.scale.setScalar(growth * (.9 + (i % 3) * .08)));
 }

@@ -1,7 +1,7 @@
 // CloClo's language-model brain: one Claude call per decision.
 // Runs on the server only, so the API key never reaches the browser.
 import Anthropic from '@anthropic-ai/sdk';
-import { ACTIVITY_INFO } from '../src/clo/catalog.js';
+import { ACTIVITY_INFO } from '../src/sim/catalog.js';
 
 export const MODEL = 'claude-haiku-5-5';
 // Claude Haiku 5.5 prices in USD per million tokens (prompts up to 100K tokens).

@@ -4,13 +4,13 @@ import { scene, camera } from './scene.js';
 import { world, hour } from './state.js';
 import { buildWorld, updateWorld } from './world/index.js';
 import { buildCloClo } from './clo/model.js';
-import { createBrain } from './clo/brain.js';
 import { animateCloClo } from './clo/animate.js';
 import { updateLight } from './lighting.js';
 import { cam, setupControls, updateCamera } from './controls.js';
 import { write, setupHud, updateHud, updateBubble } from './hud.js';
 import { updateParticles } from './particles.js';
-import { detectLLM } from './clo/llm.js';
+import { connect } from './source.js';
+import { isNightAt } from './sim/simulation.js';
 
 const stage = document.getElementById('stage');
 
@@ -23,7 +23,7 @@ try {
 
 if (renderer) start(renderer);
 
-function start(renderer) {
+async function start(renderer) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -31,39 +31,68 @@ function start(renderer) {
 
   buildWorld();
   const model = buildCloClo();
-  const brain = createBrain(model, write);
   setupControls(stage);
   setupHud();
-  write('Good morning, Mosdorp! What shall I do today?');
-  detectLLM().then(l => {
-    document.getElementById('brainNote').textContent = l.enabled
-      ? 'CloClo’s choices, thoughts and diary are written live by a language model (Claude Haiku 5.5), based on his needs and the time of day.'
-      : 'Prototype: CloClo currently decides for himself using simple rules based on his needs. In a next step, a language model takes over those choices and the world runs on a server, so everyone sees the same thing.';
-  });
+
+  const source = await connect(write);
+  // Only a copy running in this browser can be sped up; the live CloClo runs at the server's pace.
+  document.getElementById('speed').hidden = source.remote;
+  document.getElementById('brainNote').textContent = !source.remote
+    ? 'This copy of Mosdorp runs only in your browser. CloClo decides with simple rules based on his needs and the time of day.'
+    : source.brain
+      ? 'Everyone watching sees the same CloClo, live. His choices, thoughts and diary are written by a language model (Claude Haiku 5.5), based on his needs and the time of day.'
+      : 'Everyone watching sees the same CloClo, live. He decides with simple rules based on his needs and the time of day.';
+
+  // What the drawing code needs to know about CloClo, filled from the simulation each frame.
+  const V = { mode: null, act: null, thought: '', anchor: null, face: 0, hop: false, wow: false };
+  const anchor = new THREE.Vector3();
+  let seenHop = null, seenWow = null, first = true;
 
   const clock = new THREE.Clock();
   let anim = 0, hudT = 0;
 
   function frame() {
     const rd = Math.min(clock.getDelta(), .1); // real seconds
-    const gd = rd * world.speed;               // game minutes
     anim += rd;
-    world.T += gd;
+    const view = source.view(rd);
+    if (source.remote) {
+      world.T = view.T;
+      world.speed = view.speed;
+    }
 
-    brain.update(gd);
-    const h = hour(), isNight = h >= 20.5 || h < 6.3;
-    const chasing = brain.S.mode === 'doing' && brain.S.act === 'butterflies';
-    updateWorld({ anim, rd, gd, swinging: brain.isSwinging(), chaseAt: chasing ? model.clo.position : null, isNight });
-    animateCloClo(model, brain.S, anim, rd, brain.mood(), isNight);
+    const c = view.clo;
+    V.mode = c.mode;
+    V.act = c.act;
+    V.thought = c.thought;
+    V.anchor = c.anchor ? anchor.fromArray(c.anchor) : null;
+    // while dancing or chasing butterflies he spins on his own (see animate.js)
+    if (!(c.mode === 'doing' && (c.act === 'dance' || c.act === 'butterflies'))) V.face = c.face;
+    if (seenHop !== null && c.hop !== seenHop) V.hop = true;
+    if (seenWow !== null && c.wow !== seenWow) V.wow = true;
+    seenHop = c.hop;
+    seenWow = c.wow;
+    model.clo.position.set(c.x, c.y, c.z);
+    model.clo.visible = c.visible;
+    for (const k in model.items) model.items[k].visible = k === c.item;
+    if (first) {
+      model.clo.rotation.y = c.face;
+      cam.target.copy(model.clo.position);
+      first = false;
+    }
+
+    const isNight = isNightAt(hour());
+    const doing = c.mode === 'doing';
+    updateWorld({ anim, rd, swinging: doing && c.act === 'swing', chaseAt: doing && c.act === 'butterflies' ? model.clo.position : null, growth: view.growth, cat: view.cat });
+    animateCloClo(model, V, anim, rd, view.mood, isNight);
     updateParticles(rd);
     updateLight(stage);
 
-    updateCamera(rd, model.clo.position, brain.S.anchor);
+    updateCamera(rd, model.clo.position, V.anchor);
     renderer.render(scene, camera);
 
-    updateBubble(stage, model.clo.position, brain.S);
+    updateBubble(stage, model.clo.position, V);
     hudT -= rd;
-    if (hudT < 0) { updateHud(brain.need, brain.S); hudT = .25; }
+    if (hudT < 0) { updateHud(view.needs, V, view.viewers, source.connected); hudT = .25; }
     requestAnimationFrame(frame);
   }
 
@@ -74,6 +103,5 @@ function start(renderer) {
     camera.updateProjectionMatrix();
   }).observe(stage);
 
-  cam.target.copy(model.clo.position);
   requestAnimationFrame(frame);
 }

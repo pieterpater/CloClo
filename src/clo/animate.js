@@ -3,7 +3,7 @@ import { world } from '../state.js';
 import { clamp } from '../helpers.js';
 import { LOC } from '../world/locations.js';
 import { park } from '../world/park.js';
-import { ACTS } from './acts.js';
+import { ACTS } from '../sim/acts.js';
 import { emit } from '../particles.js';
 
 let blink = 3, lookT = 0, hopT = 0, wowT = 0, fxT = 0;

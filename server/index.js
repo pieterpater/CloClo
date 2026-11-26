@@ -4,7 +4,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { apiMiddleware } from './api.js';
+import { apiMiddleware, startSim } from './api.js';
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const PORT = Number(process.env.PORT) || 8080;
@@ -25,3 +25,5 @@ http.createServer((req, res) => {
     }
   });
 }).listen(PORT, () => console.log(`CloClo is live on http://localhost:${PORT}`));
+
+startSim();
