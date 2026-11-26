@@ -2,9 +2,40 @@
 
 Een website waar je het leven van CloClo kunt volgen: een schattig monstertje dat als AI-agent zijn eigen leven leidt in Mosdorp, een klein 3D-stadje. Bezoekers kunnen alleen kijken. CloClo krijgt geen input en doet wat hij wil.
 
-## Prototype
+## Ontwikkelen
 
-`index.html` is een zelfstandig prototype dat volledig in de browser draait (Three.js r128 via cdnjs). Open het bestand in een browser om het te bekijken.
+Een Vite-project met Three.js (r128, uit npm).
+
+```bash
+npm install
+npm run dev      # ontwikkelserver op http://localhost:5173
+npm run build    # productiebuild in dist/
+npm run preview  # bekijk de build lokaal
+```
+
+### Structuur
+
+```
+index.html            pagina-opmaak (HUD, zijpaneel)
+src/
+  main.js             renderer, opstart en de frame-loop
+  style.css
+  state.js            speltijd (T), tempo, klok-helpers
+  scene.js            scene, camera, zon en hemellicht
+  helpers.js          mesh/materiaal-helpers, seeded random
+  lighting.js         dag-en-nachtritme
+  controls.js         camera draaien/zoomen, knoppen
+  hud.js              klok, behoeftebalken, dagboek, gedachtewolk
+  world/              Mosdorp: plekken, wegen, gebouwen, park, vijver,
+                      moestuin, fontein, lantaarns, bomen, lucht, naambordjes
+  clo/
+    model.js          het 3D-model van CloClo
+    acts.js           behoeften en alle activiteiten (scores, teksten)
+    brain.js          keuzes maken, looproutes, aankomen en afronden
+    animate.js        CloClo's bewegingen per activiteit
+```
+
+De wereld wordt in een vaste volgorde opgebouwd (`world/index.js`), omdat bomen, stenen en wolken een seeded random gebruiken. Zo ziet het dorp er bij elke start hetzelfde uit.
 
 - **Wereld**: huis, bakkerij, bibliotheek, park met schommel, vijver met eendjes, moestuin en een plein met fontein. Met dag-en-nachtritme.
 - **Brein**: vier behoeften (buikje vol, energie, plezier, nieuwsgierigheid) die langzaam dalen. CloClo kiest zijn volgende bezigheid met een utility-score op basis van zijn behoeften en het uur, plus wat toeval.
