@@ -2,6 +2,7 @@
 // Runs on the server only, so the API key never reaches the browser.
 import Anthropic from '@anthropic-ai/sdk';
 import { ACTIVITY_INFO } from '../src/sim/catalog.js';
+import { COLOURS, SIZE, MAX_H } from '../src/sim/blocks.js';
 
 export const MODEL = 'claude-haiku-5-5';
 // Claude Haiku 5.5 prices in USD per million tokens (prompts up to 100K tokens).
@@ -66,24 +67,25 @@ function situation(st) {
     `It is ${clean(st.time, 30)} (${part}).`,
     st.previous && KEYS.includes(st.previous) ? `CloClo just finished: ${st.previous}.` : 'CloClo has just woken up for the first time today.',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
+    st.yard ? `At the block yard: ${st.yard.blocks ? `${st.yard.blocks} blocks, last built: "${clean(st.yard.idea, 60)}"` : 'nothing built yet'}.` : '',
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
     ...(st.diary || []).slice(0, 8).map(d => `- ${clean(d, 140)}`),
     `Open right now: ${open.join(', ')}.`,
     'What does CloClo do next?'
   ];
-  return { text: lines.join('\n'), open };
+  return { text: lines.filter(Boolean).join('\n'), open };
 }
 
 // Running totals since the server started, for the log and /api/brain.
 export const usage = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, cost: 0 };
 
-export async function decide(state) {
-  const { text, open } = situation(state);
+// One call to Claude with a JSON answer; keeps the running totals up to date.
+async function ask(text, schema, maxTokens) {
   const res = await client.messages.create({
     model: MODEL,
-    max_tokens: 1024, // room for brief thinking plus the short JSON answer
-    output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
+    max_tokens: maxTokens, // room for brief thinking plus the JSON answer
+    output_config: { effort: 'low', format: { type: 'json_schema', schema } },
     system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: text }]
   });
@@ -96,10 +98,17 @@ export async function decide(state) {
   usage.cacheWrite += u.cache_creation_input_tokens || 0;
   usage.output += u.output_tokens;
   usage.cost += cost;
-
   if (res.stop_reason !== 'end_turn') throw new Error('stopped: ' + res.stop_reason);
   const block = res.content.find(b => b.type === 'text');
-  const out = JSON.parse(block.text);
+  return {
+    out: JSON.parse(block.text),
+    usage: { input: u.input_tokens, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, output: u.output_tokens, cost }
+  };
+}
+
+export async function decide(state) {
+  const { text, open } = situation(state);
+  const { out, usage: used } = await ask(text, SCHEMA, 1024);
   if (!open.includes(out.activity)) throw new Error('chose a closed activity: ' + out.activity);
   return {
     activity: out.activity,
@@ -108,8 +117,63 @@ export async function decide(state) {
     plan: clean(out.plan, 120),
     mood: MOODS.includes(out.mood) ? out.mood : 'happy',
     minutes: Math.max(5, Math.min(out.activity === 'sleep' ? 660 : 600, Math.round(Number(out.minutes) || 30))),
-    usage: { input: u.input_tokens, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0, output: u.output_tokens, cost }
+    usage: used
   };
+}
+
+// ---- the block yard: what does he build? ----
+const BUILD_SCHEMA = {
+  type: 'object',
+  properties: {
+    idea: { type: 'string' },
+    thought: { type: 'string' },
+    steps: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['place', 'remove'] },
+          x: { type: 'integer' },
+          z: { type: 'integer' },
+          color: { type: 'string', enum: COLOURS }
+        },
+        required: ['action', 'x', 'z', 'color'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['idea', 'thought', 'steps'],
+  additionalProperties: false
+};
+const MAX_STEPS = 16;
+
+export async function planBuild(st) {
+  const text = [
+    'CloClo is at the block yard and is about to build. You design what he builds.',
+    `The yard is a grid of ${SIZE} by ${SIZE} spots: x goes from 0 to ${SIZE - 1}, left to right as he faces it; z goes from 0 (the front, closest to him) to ${SIZE - 1} (the back).`,
+    `Blocks stack: each spot holds at most ${MAX_H} blocks. Colours: ${COLOURS.join(', ')}.`,
+    'What stands there now, per spot, from the bottom up:',
+    clean(st.yard, 4000).replace(/ (x\d)/g, '\n$1') || 'The yard is empty.',
+    st.idea ? `The last thing he built there: "${clean(st.idea, 80)}".` : 'He has never built anything here.',
+    `His plan: ${clean(st.plan, 120) || 'none'}.`,
+    st.yard ? `At the block yard: ${st.yard.blocks ? `${st.yard.blocks} blocks, last built: "${clean(st.yard.idea, 60)}"` : 'nothing built yet'}.` : '',
+    'Recent diary (newest first):',
+    ...(st.diary || []).slice(0, 6).map(d => `- ${clean(d, 140)}`),
+    '',
+    `He can add to what is there, change it, or take blocks away and start something new. Use up to ${MAX_STEPS} steps, in the order he does them: "place" puts a block of that colour on top of a spot, "remove" takes the top block off a spot (its colour doesn't matter).`,
+    'Reply with JSON:',
+    '- idea: what he is building, a short phrase like "a tower for Biscuit" or "a red house with a door" (at most 50 characters).',
+    '- thought: what he thinks as he starts (at most 70 characters, first person).',
+    '- steps: the building steps.'
+  ].join('\n');
+  const { out, usage: used } = await ask(text, BUILD_SCHEMA, 2048);
+  const ok = n => Number.isInteger(n) && n >= 0 && n < SIZE;
+  const steps = (out.steps || [])
+    .filter(s => (s.action === 'place' || s.action === 'remove') && ok(s.x) && ok(s.z) && COLOURS.includes(s.color))
+    .slice(0, MAX_STEPS)
+    .map(s => ({ action: s.action, x: s.x, z: s.z, color: s.color }));
+  if (!steps.length) throw new Error('no usable building steps');
+  return { idea: clean(out.idea, 60) || 'something', thought: clean(out.thought, 100), steps, usage: used };
 }
 
 export const systemPrompt = SYSTEM;

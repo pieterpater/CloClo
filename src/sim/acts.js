@@ -128,5 +128,13 @@ export const ACTS = {
     why: ['Biscuit! Where are you, Biscuit?', 'I miss my friend Biscuit.'],
     mid: ['Purrrr… she’s purring!', 'Who’s a soft kitty? You are!', 'Her nose is so tiny.'],
     end: ['Biscuit gave me a headbutt. That means she loves me.', 'Biscuit and I watched the fountain together.']
+  },
+  build: {
+    loc: 'blocks', txt: 'is building with blocks', item: 'block', fx: ['sparkle', 2.2],
+    score: h => day(h) ? 45 : AWKWARD, mood: 'delighted',
+    dur: () => 40,
+    why: ['To the block yard! I have an idea.', 'I want to build something with the blocks.'],
+    mid: ['One more on top…', 'Careful, careful…', 'This one goes here!'],
+    end: ['I built something! I’ll show Biscuit.', 'My building is finished. For now.']
   }
 };

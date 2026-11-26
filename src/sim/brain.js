@@ -4,6 +4,7 @@ import { pick } from './util.js';
 import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
+import { yard, applyStep, rulesPlan, describeYard, blockCount } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
 // decides freely, and without it simple rules pick something that suits the time of day.
@@ -18,7 +19,8 @@ const GRANDMA = [
 // body: where CloClo is ({ position, visible, item }); cat: Biscuit (sim/cat.js)
 // writeDiary(text): adds a line to his diary
 // opts.canDecide() / opts.decide(state): an optional language-model brain (see server/sim.js).
-//   decide resolves to { activity, thought, diary }, or null to let the rules decide.
+//   decide resolves to { activity, thought, diary, minutes, mood, plan }, or null to let the rules decide.
+// opts.planBuild(state): asks the language model what to build at the block yard → { idea, thought, steps } or null.
 export function createBrain(body, cat, writeDiary, opts = {}) {
   const clo = body;
   // the latest diary lines, newest first, to give the language model some memory
@@ -88,7 +90,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.thought = 'Hmm… what shall I do next?';
     Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h, plan: S.plan,
-      previous: S.prev, last: S.last, diary: memory,
+      previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() },
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
@@ -138,10 +140,67 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
       S.anchor = new THREE.Vector3(L.x, L.b.h + 3.2, L.z);
     } else S.hop = true;
     clo.item = a.item || null;
+    if (S.act === 'build') startBuild();
+  }
+
+  // ---- building at the block yard ----
+  // On arrival he works out what to build (the language model, or the rules), then places one block
+  // every few game minutes, and admires the result for a bit.
+  const STEP_MINUTES = 3;
+
+  function startBuild() {
+    S.left = 1e9; // until the building is done
+    S.build = { steps: null, t: 0 };
+    S.tNext = world.T + 1e9;
+    const useModel = opts.planBuild && opts.canDecide();
+    if (!useModel) return setBuildPlan(rulesPlan());
+    S.thought = 'Hmm… what shall I build?';
+    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory };
+    Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
+      if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
+    });
+  }
+
+  function setBuildPlan(plan) {
+    S.build.steps = plan.steps.slice();
+    yard.idea = plan.idea;
+    S.thought = plan.thought || pick(ACTS.build.why);
+    write(S.thought);
+    S.tNext = world.T + 1e9; // his own thought stays up while he builds
+  }
+
+  // where spot (x, z) of the grid is in the world
+  function spotPos(x, z) {
+    const L = LOC.blocks, lx = -2.25 + x * .9, lz = 2.25 - z * .9;
+    return { x: L.x + lx * Math.cos(L.rot) + lz * Math.sin(L.rot), z: L.z - lx * Math.sin(L.rot) + lz * Math.cos(L.rot) };
+  }
+
+  function stepBuild(gd) {
+    const b = S.build;
+    if (!b || !b.steps) return;
+    b.t -= gd;
+    if (b.t > 0) return;
+    while (b.steps.length) {
+      const st = b.steps.shift();
+      if (!applyStep(st)) continue; // a full or empty spot: skip it
+      const p = spotPos(st.x, st.z);
+      S.face = Math.atan2(p.x - clo.position.x, p.z - clo.position.z);
+      S.placed = (S.placed || 0) + 1; // viewers see a new block appear
+      b.t = STEP_MINUTES;
+      return;
+    }
+    // done: admire it for a moment
+    b.steps = null;
+    S.build = null;
+    S.left = 8;
+    S.thought = pick(['Ta-da!', 'I made this!', 'Look at it!']);
+    S.face = S.tgt.face;
+    S.tNext = world.T + 4;
   }
 
   function finish() {
     S.prev = S.act;
+    S.build = null;
     if (S.act === 'cat') cat.release();
     clo.item = null;
     clo.visible = true;
@@ -170,6 +229,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
       const a = ACTS[S.act];
       S.left -= gd;
       if (S.act === 'gardening') garden.growth = Math.min(1.6, garden.growth + gd * .004);
+      if (S.act === 'build') stepBuild(gd);
       if (S.act === 'fish' && Math.random() < gd * .012) {
         S.thought = 'A bite!';
         S.wow = true;

@@ -129,7 +129,9 @@ export function buildCloClo() {
   hoop.rotation.x = .7 + Math.PI / 2;
   const bag = mesh(new THREE.ConeGeometry(.2, .35, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .55, side: THREE.DoubleSide }), .1, .9, 1.1, net);
   bag.rotation.x = .7 + Math.PI;
-  const items = { rod, can, icecream: cone, letter, net };
+  const block = item('block');
+  mesh(box(.3, .3, .3), mat(0xe63946), .1, -.42, .22, block);
+  const items = { rod, can, icecream: cone, letter, net, block };
 
   // a lantern in his left hand for walks after dark
   const lantern = new THREE.Group();

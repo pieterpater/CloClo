@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { world } from '../src/state.js';
 import { createSimulation } from '../src/sim/simulation.js';
-import { MODEL, brainAvailable, decide, usage } from './brain.js';
+import { MODEL, brainAvailable, decide, planBuild, usage } from './brain.js';
 
 const SPEED = Number(process.env.SIM_SPEED) || 1;            // game minutes per real second
 const DATA = process.env.CLOCLO_DATA || 'data/world.json';  // where the world is saved
@@ -26,24 +26,30 @@ function withinLimits() {
   return minute.n < PER_MINUTE && day.n < PER_DAY;
 }
 
-const llm = {
-  canDecide: () => brainAvailable() && (viewers.size > 0 || WHEN_EMPTY) && Date.now() > backoffUntil && withinLimits(),
-  async decide(state) {
+// Each call counts towards the limits; after an error the rules take over for a while.
+function limited(fn, describe) {
+  return async state => {
     minute.n++;
     day.n++;
     try {
-      const out = await decide(state);
+      const out = await fn(state);
       failures = 0;
-      console.log(`[brain] ${out.activity.padEnd(11)} in ${out.usage.input}+${out.usage.cacheRead}c out ${out.usage.output}  $${out.usage.cost.toFixed(5)}  (total $${usage.cost.toFixed(4)} over ${usage.calls} calls)`);
+      console.log(`[brain] ${describe(out).padEnd(30)} in ${out.usage.input}+${out.usage.cacheRead}c out ${out.usage.output}  $${out.usage.cost.toFixed(5)}  (total $${usage.cost.toFixed(4)} over ${usage.calls} calls)`);
       return out;
     } catch (e) {
       failures++;
       // wait longer after each failure: 30 s, 60 s, … up to 10 minutes
       backoffUntil = Date.now() + Math.min(600e3, 30e3 * failures);
-      console.warn('[brain] decision failed, using the rules for now:', e.message);
+      console.warn('[brain] call failed, using the rules for now:', e.message);
       return null;
     }
-  }
+  };
+}
+
+const llm = {
+  canDecide: () => brainAvailable() && (viewers.size > 0 || WHEN_EMPTY) && Date.now() > backoffUntil && withinLimits(),
+  decide: limited(decide, out => out.activity),
+  planBuild: limited(planBuild, out => `build: ${out.idea} (${out.steps.length} steps)`)
 };
 
 const send = (res, event, data) => res.write(`${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`);

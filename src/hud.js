@@ -30,7 +30,7 @@ export function updateHud(mood, S, viewers, connected) {
   const L = LOC[a.loc];
   nowTxt.textContent = S.mode === 'thinking' ? 'is deciding what to do next' : S.mode === 'walking'
     ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
-    : a.txt;
+    : S.act === 'build' && S.idea ? 'is building ' + S.idea : a.txt;
   nowLoc.textContent = L.name;
   planEl.hidden = !S.plan;
   planEl.textContent = S.plan ? 'Plan: ' + S.plan : '';

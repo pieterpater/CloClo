@@ -3,6 +3,7 @@ import { world, hour } from '../state.js';
 import { createBrain } from './brain.js';
 import { createCat } from './cat.js';
 import { garden, growGarden } from './garden.js';
+import { yard, yardToString, yardFromString } from './blocks.js';
 
 // Everything that happens in Mosdorp, without any drawing. It runs on the server (one CloClo for
 // everyone, see server/sim.js) or, without a server, in the browser.
@@ -53,7 +54,8 @@ export function createSimulation(opts = {}) {
         x: r2(cat.pos.x), z: r2(cat.pos.z), face: r2(cat.face),
         walking: cat.walking, sleeping: cat.sleeping, meeting: !!cat.meetAt
       },
-      growth: r2(garden.growth)
+      growth: r2(garden.growth),
+      yard: yardToString(), idea: yard.idea
     };
   }
 
@@ -62,7 +64,7 @@ export function createSimulation(opts = {}) {
   function save() {
     const S = brain.S;
     return {
-      version: 1, T: world.T, mood: S.mood, growth: garden.growth, diary, memory: brain.memory,
+      version: 1, T: world.T, mood: S.mood, yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
       last: S.last, prev: S.act, plan: S.plan, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
       pos: body.position.toArray(), cat: cat.pos.toArray()
     };
@@ -72,6 +74,8 @@ export function createSimulation(opts = {}) {
     const S = brain.S;
     world.T = d.T;
     S.mood = d.mood || 'happy';
+    yardFromString(d.yard);
+    yard.idea = d.idea || '';
     garden.growth = d.growth;
     diary.splice(0, diary.length, ...d.diary.slice(0, DIARY_MAX));
     brain.memory.splice(0, brain.memory.length, ...d.memory);

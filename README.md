@@ -29,7 +29,7 @@ Without the server (static hosting, or the server can't be reached) the page run
 
 ### The language-model brain
 
-With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. He has no needs or stats; only opening hours limit what he can do.
+With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. At the block yard it also designs what he builds. He has no needs or stats; only opening hours limit what he can do.
 
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env   # .env is git-ignored (used by npm run dev/preview)
@@ -74,6 +74,7 @@ src/
     acts.js           all activities (texts, and time-of-day scores for the rules)
     catalog.js        activity descriptions for the language model
     cat.js            where Biscuit goes and what she does
+    blocks.js         the block yard: which blocks stand where
     garden.js         how big the plants are
   clo/
     model.js          CloClo's 3D model
@@ -87,8 +88,9 @@ server/
 
 The world is built in a fixed order (`world/index.js`) because trees, stones and clouds use a seeded random. That way the village looks the same on every start.
 
-- **World**: CloClo's house, bakery, library, post office, ice cream stand, park with a swing, pond with ducks, vegetable garden, flower meadow with butterflies, a lookout hill with a telescope, and a square with a fountain. With a day/night cycle. Biscuit the cat strolls around the square and naps by the fountain at night.
-- **Brain**: no needs or stats. Claude Haiku 5.5 decides freely what he does, for how long and how he feels, with the hour, his diary and his own plan as context. Without the model, simple rules pick something that suits the time of day (meals at mealtimes, stargazing in the evening, sleep at night) and avoid repeats. Fourteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
+- **World**: CloClo's house, bakery, library, post office, ice cream stand, park with a swing, pond with ducks, vegetable garden, flower meadow with butterflies, a lookout hill with a telescope, a block yard, and a square with a fountain. With a day/night cycle. Biscuit the cat strolls around the square and naps by the fountain at night.
+- **Brain**: no needs or stats. Claude Haiku 5.5 decides freely what he does, for how long and how he feels, with the hour, his diary and his own plan as context. Without the model, simple rules pick something that suits the time of day (meals at mealtimes, stargazing in the evening, sleep at night) and avoid repeats. Fifteen activities, from fishing and reading to cuddling Biscuit, writing to Grandma and stargazing at night.
+- **Block yard**: a 6×6 grid where blocks stack up to 6 high, in seven colours. When CloClo goes building, the language model gets a description of what stands there and designs up to 16 steps (place a block, or take the top one off); he places them one by one and they pop into place. What he builds is saved, so he can add to it later or start over. Without the model, simple rules build towers and walls, and tidy up when the yard gets full.
 - **CloClo**: his face shows the mood the brain chose (smile or frown, eyebrows, rosy cheeks, sleepy eyes), his eyes glance around, his tail wags when he is happy, he hops when he arrives somewhere, and he carries a lantern after dark. Hearts, music notes, stars and z's float up while he does things he enjoys.
 - **Display**: a thought bubble, what he is doing, feeling and planning, a diary, how many people are watching, and a camera you can rotate and zoom. The local copy also has speed 1×, 5× or 20×.
 

@@ -14,5 +14,6 @@ export const ACTIVITY_INFO = {
   stargaze: 'Look at the stars through the telescope on the lookout hill. Only when it is dark enough: 20:30–22:30.',
   letter: 'Write a letter to Grandma and post it at the post office. Open 9:00–17:00.',
   butterflies: 'Chase butterflies with a net in the flower meadow (never catches them, just says hello). 8:00–19:00.',
-  cat: 'Find Biscuit the village cat on the square and cuddle her.'
+  cat: 'Find Biscuit the village cat on the square and cuddle her.',
+  build: 'Build something at the block yard with stackable blocks in seven colours: towers, houses, animals, anything. What he builds stays there, so he can add to it, change it or start over another day. When he gets there you design what he builds.'
 };
