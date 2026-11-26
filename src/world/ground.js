@@ -15,7 +15,7 @@ export function buildRoads() {
   for (const k in LOC) {
     const L = LOC[k];
     if (!L.dir) continue;
-    const S = L.spot.length() + (L.b ? .4 : 0), Ls = S - 5, u = L.dir.clone().negate();
+    const S = L.spot.length() + (L.b ? .4 : 0) - L.roadStop, Ls = S - 5, u = L.dir.clone().negate();
     const road = mesh(box(2.6, .04, Ls), mat(0xdccba8), u.x * (5 + Ls / 2), .02, u.z * (5 + Ls / 2));
     road.rotation.y = L.rot;
     road.castShadow = false;

@@ -27,7 +27,7 @@ export function buildTrees() {
     for (const k in LOC) {
       const L = LOC[k];
       if (!L.dir) continue;
-      if (segD(x, z, L) < 3 || Math.hypot(x - L.x, z - L.z) < (k === 'park' ? 5.5 : 6.5)) ok = false;
+      if (segD(x, z, L) < 3 || Math.hypot(x - L.x, z - L.z) < L.clear) ok = false;
     }
     if (ok) { tree(x, z, .8 + rnd() * .6); placed++; }
   }

@@ -35,4 +35,28 @@ export function buildBuildings() {
   const library = building(LOC.library);
   for (const x of [-1.4, 1.4]) mesh(new THREE.CylinderGeometry(.22, .22, 3.4, 10), mat(0xffffff), x, 1.7, 2.9, library);
   mesh(box(4, .25, 1), mat(0xd6d0c4), 0, .12, 3, library);
+
+  // post office with a red mailbox and an envelope sign
+  const post = building(LOC.post);
+  const o = LOC.post.b;
+  mesh(new THREE.CylinderGeometry(.08, .08, 1.1, 6), mat(0x30475e), 1.75, .55, o.d / 2 + 1.25, post);
+  mesh(box(.6, .7, .45), mat(0xd62828), 1.75, 1.35, o.d / 2 + 1.25, post);
+  const lid = mesh(new THREE.CylinderGeometry(.3, .3, .45, 12, 1, false, 0, Math.PI), mat(0xd62828), 1.75, 1.7, o.d / 2 + 1.25, post);
+  lid.rotation.set(0, Math.PI / 2, Math.PI / 2);
+  mesh(box(.4, .05, .02), mat(0x14213d), 1.75, 1.5, o.d / 2 + 1.48, post);
+  mesh(box(1.3, .85, .08), mat(0xffffff), 0, o.h - .2, o.d / 2 + .08, post);
+  const flap = mesh(box(.92, .92, .06), mat(0xd62828), 0, o.h - .05, o.d / 2 + .1, post);
+  flap.rotation.z = Math.PI / 4;
+  flap.scale.set(1, .55, 1);
+
+  // little picket fence and flower boxes at CloClo's house
+  const h = LOC.home.b;
+  for (let i = 0; i < 7; i++) {
+    for (const s of [-1, 1]) mesh(box(.12, .7, .08), mat(0xffffff), s * (1.45 + i * .3), .35, h.d / 2 + 2.2, house);
+  }
+  for (const s of [-1, 1]) {
+    mesh(box(2, .08, .06), mat(0xffffff), s * 2.35, .5, h.d / 2 + 2.2, house);
+    mesh(box(1, .22, .25), mat(0x8a5a3b), s * (h.w / 2 - 1.05), h.h * .6 - .55, h.d / 2 + .2, house);
+    for (const x of [-.3, 0, .3]) mesh(new THREE.IcosahedronGeometry(.13), mat(x ? 0xff8fab : 0xffd166), s * (h.w / 2 - 1.05) + x, h.h * .6 - .38, h.d / 2 + .22, house);
+  }
 }

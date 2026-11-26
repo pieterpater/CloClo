@@ -1,7 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { scene, camera } from './scene.js';
-import { world } from './state.js';
+import { world, hour } from './state.js';
 import { buildWorld, updateWorld } from './world/index.js';
 import { buildCloClo } from './clo/model.js';
 import { createBrain } from './clo/brain.js';
@@ -9,6 +9,7 @@ import { animateCloClo } from './clo/animate.js';
 import { updateLight } from './lighting.js';
 import { cam, setupControls, updateCamera } from './controls.js';
 import { write, setupHud, updateHud, updateBubble } from './hud.js';
+import { updateParticles } from './particles.js';
 
 const stage = document.getElementById('stage');
 
@@ -44,8 +45,11 @@ function start(renderer) {
     world.T += gd;
 
     brain.update(gd);
-    updateWorld({ anim, rd, gd, swinging: brain.isSwinging() });
-    animateCloClo(model, brain.S, anim, rd);
+    const h = hour(), isNight = h >= 20.5 || h < 6.3;
+    const chasing = brain.S.mode === 'doing' && brain.S.act === 'butterflies';
+    updateWorld({ anim, rd, gd, swinging: brain.isSwinging(), chaseAt: chasing ? model.clo.position : null, isNight });
+    animateCloClo(model, brain.S, anim, rd, brain.mood(), isNight);
+    updateParticles(rd);
     updateLight(stage);
 
     updateCamera(rd, model.clo.position, brain.S.anchor);
