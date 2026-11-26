@@ -8,6 +8,7 @@ import { apiMiddleware, startSim } from './api.js';
 
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const PORT = Number(process.env.PORT) || 8080;
+const HOST = process.env.HOST || '0.0.0.0'; // 127.0.0.1 behind a reverse proxy such as Caddy
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
 http.createServer((req, res) => {
@@ -24,6 +25,6 @@ http.createServer((req, res) => {
       res.end('Not found');
     }
   });
-}).listen(PORT, () => console.log(`CloClo is live on http://localhost:${PORT}`));
+}).listen(PORT, HOST, () => console.log(`CloClo is live on http://${HOST}:${PORT}`));
 
 startSim();

@@ -23,6 +23,8 @@ npm run build && npm start                    # production: one Node server for 
                                               # http://localhost:8080 (PORT to change)
 ```
 
+To put it on an Ubuntu VPS (systemd + Caddy for HTTPS), follow [DEPLOY.md](DEPLOY.md).
+
 Without the server (static hosting, or the server can't be reached) the page runs its own copy of Mosdorp in the browser, with the rules brain and the speed button.
 
 ### The language-model brain
@@ -92,7 +94,7 @@ The world is built in a fixed order (`world/index.js`) because trees, stones and
 
 ## Next steps
 
-1. **Hosting**: run `npm start` somewhere that stays on (a small VPS or a platform like Fly.io or Render), with a persistent disk for `data/`.
+1. **Hosting**: see [DEPLOY.md](DEPLOY.md) for an Ubuntu VPS.
 2. **Longer memory**: the language model now sees CloClo's last 8 diary lines; a daily summary would let him remember yesterday.
 3. **Moderation** of all text shown publicly.
 4. **Better 3D models** (Blender or asset packs) and more events: weather, seasons and random happenings.

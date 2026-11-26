@@ -1,0 +1,9 @@
+# Caddy in front of CloClo: automatic HTTPS for your domain. See DEPLOY.md.
+# Install: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile, change the domain, sudo systemctl reload caddy
+cloclo.example.com {
+	# compress the site, but not the live stream (it must reach viewers right away)
+	@notstream not path /api/stream
+	encode @notstream gzip
+
+	reverse_proxy 127.0.0.1:8080
+}

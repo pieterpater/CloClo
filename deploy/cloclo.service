@@ -1,0 +1,32 @@
+# systemd service for CloClo's live world. See DEPLOY.md.
+# Install: sudo cp deploy/cloclo.service /etc/systemd/system/ && sudo systemctl enable --now cloclo
+[Unit]
+Description=CloClo live world (Mosdorp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloclo
+Group=cloclo
+WorkingDirectory=/opt/cloclo
+# ANTHROPIC_API_KEY, HOST, PORT and other settings (see DEPLOY.md)
+EnvironmentFile=/etc/cloclo.env
+Environment=NODE_ENV=production
+# the world is saved here; systemd creates /var/lib/cloclo for the cloclo user
+Environment=CLOCLO_DATA=/var/lib/cloclo/world.json
+StateDirectory=cloclo
+ExecStart=/usr/bin/node server/index.js
+# stopping sends SIGTERM, which saves the world first
+Restart=on-failure
+RestartSec=5
+
+# hardening: the service can only write its own state directory
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target

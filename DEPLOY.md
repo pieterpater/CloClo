@@ -1,0 +1,88 @@
+# Putting CloClo on an Ubuntu VPS
+
+This runs one Node process (the site plus the live world) as a systemd service, with Caddy in front for HTTPS. The commands are for Ubuntu 22.04 or 24.04; run them as a user with `sudo`.
+
+## 1. Install Node.js 22, git and Caddy
+
+```bash
+sudo apt update && sudo apt install -y git curl
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v   # should print v22.x
+
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install -y caddy
+```
+
+## 2. Get the code and build it
+
+```bash
+sudo useradd --system --home /opt/cloclo --shell /usr/sbin/nologin cloclo
+sudo git clone https://github.com/pieterpater/cloclo.git /opt/cloclo
+cd /opt/cloclo
+sudo git checkout main            # or the branch you want to run
+sudo npm ci
+sudo npm run build
+sudo chown -R cloclo:cloclo /opt/cloclo
+```
+
+The repository is private, so `git clone` asks for a login. Use a GitHub personal access token (with read access to this repository) as the password, or add a read-only deploy key to the repository.
+
+## 3. Settings and the API key
+
+```bash
+sudo tee /etc/cloclo.env > /dev/null <<'EOF'
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+HOST=127.0.0.1
+PORT=8080
+EOF
+sudo chmod 600 /etc/cloclo.env
+```
+
+Optional settings for the same file: `SIM_SPEED`, `BRAIN_MAX_PER_MINUTE`, `BRAIN_MAX_PER_DAY`, `BRAIN_WHEN_EMPTY` (see README.md). Leave out `ANTHROPIC_API_KEY` to run CloClo on his rules, for free.
+
+## 4. Start CloClo
+
+```bash
+sudo cp /opt/cloclo/deploy/cloclo.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cloclo
+systemctl status cloclo            # should say "active (running)"
+curl -s localhost:8080/api/brain   # {"brain":"claude-haiku-5-5", ...}
+```
+
+## 5. HTTPS with your domain
+
+Point your domain (or a subdomain) to the VPS with an `A` record for its IP address. Then:
+
+```bash
+sudo cp /opt/cloclo/deploy/Caddyfile /etc/caddy/Caddyfile
+sudo nano /etc/caddy/Caddyfile      # replace cloclo.example.com with your domain
+sudo systemctl reload caddy
+
+sudo ufw allow OpenSSH
+sudo ufw allow 80,443/tcp
+sudo ufw enable
+```
+
+Caddy gets a certificate by itself. Open `https://your-domain` and CloClo is live.
+
+No domain? Skip step 5, set `HOST=0.0.0.0` in `/etc/cloclo.env`, run `sudo systemctl restart cloclo` and `sudo ufw allow 8080/tcp`, and open `http://your-vps-ip:8080`.
+
+## Everyday use
+
+```bash
+journalctl -u cloclo -f            # live log: every decision with its cost
+curl -s localhost:8080/api/brain   # viewers, decisions today, total cost since the last start
+
+# update to the latest code
+cd /opt/cloclo
+sudo git pull
+sudo npm ci && sudo npm run build
+sudo chown -R cloclo:cloclo /opt/cloclo
+sudo systemctl restart cloclo      # CloClo continues where he was
+```
+
+CloClo's world is saved in `/var/lib/cloclo/world.json`. Delete that file (with the service stopped) to give him a fresh start.
