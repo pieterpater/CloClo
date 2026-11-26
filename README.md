@@ -42,7 +42,7 @@ Server settings (environment variables):
 
 | Variable | Default | |
 |---|---|---|
-| `SIM_SPEED` | 1 | game minutes per real second (1 = a game day takes 24 minutes) |
+| `SIM_SPEED` | 1 | game minutes per real second; while CloClo sleeps the clock runs 6× faster, so a game day takes about 16 minutes |
 | `CLOCLO_DATA` | `data/world.json` | where the world is saved |
 | `BRAIN_MAX_PER_MINUTE` | 10 | language-model decisions per minute |
 | `BRAIN_MAX_PER_DAY` | 3000 | language-model decisions per day (≈ $0.30 per day at most) |

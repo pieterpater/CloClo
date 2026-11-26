@@ -20,8 +20,8 @@ const clockEl = document.getElementById('clock'), nowTxt = document.getElementBy
 const viewersEl = document.getElementById('viewers'), planEl = document.getElementById('nowPlan'), moodEl = document.getElementById('nowMood');
 
 // Clock, viewers, and what he is doing, feeling and planning.
-export function updateHud(mood, S, viewers, connected) {
-  clockEl.textContent = connected ? dayLabel(world.T) : 'Reconnecting…';
+export function updateHud(mood, S, viewers, connected, speed) {
+  clockEl.textContent = !connected ? 'Reconnecting…' : dayLabel(world.T) + (speed > 1 ? ` · ${speed}×` : '');
   viewersEl.hidden = !viewers;
   viewersEl.textContent = viewers === 1 ? '1 watching' : viewers + ' watching';
   moodEl.textContent = mood ? 'Feeling ' + mood : '';

@@ -104,6 +104,9 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
   // so can `llm.minutes` (how long he does it), `llm.mood` (how he feels) and `llm.plan` (a note to himself for later).
   function start(best, thought, diary, llm) {
     S.minutes = llm ? llm.minutes : null;
+    // a nap in the daytime stays a nap
+    const h = hour();
+    if (best === 'sleep' && !(h >= 19.5 || h < 6.5)) S.minutes = Math.min(S.minutes || 60, 90);
     S.mood = (llm && llm.mood) || ACTS[best].mood;
     if (llm) S.plan = llm.plan || '';
     // a diary line about what he just finished

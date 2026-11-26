@@ -11,6 +11,8 @@ import { yard, yardToString, yardFromString } from './blocks.js';
 //   opts.onDiary(entry): called with { T, text } for every new diary line
 export const DIARY_MAX = 40;
 export const isNightAt = h => h >= 20.5 || h < 6.3;
+// While CloClo sleeps the clock runs this much faster, so viewers don't watch a dark house for ten minutes.
+export const SLEEP_SPEEDUP = 6;
 
 export function createSimulation(opts = {}) {
   const diary = [];
@@ -26,7 +28,11 @@ export function createSimulation(opts = {}) {
   let hopN = 0, wowN = 0;
 
   // gd: game minutes to advance
+  const asleep = () => brain.S.mode === 'doing' && brain.S.act === 'sleep';
+
+  // gd: game minutes to advance at normal pace
   function tick(gd) {
+    if (asleep()) gd *= SLEEP_SPEEDUP;
     world.T += gd;
     brain.update(gd);
     cat.update(gd, isNightAt(hour()));
@@ -42,7 +48,7 @@ export function createSimulation(opts = {}) {
   function snapshot() {
     const S = brain.S, p = body.position;
     return {
-      t: Date.now(), T: r2(world.T), speed: world.speed,
+      t: Date.now(), T: r2(world.T), speed: world.speed * (asleep() ? SLEEP_SPEEDUP : 1),
       clo: {
         x: r2(p.x), y: r2(p.y), z: r2(p.z), face: r2(S.face), visible: body.visible, item: body.item,
         mode: S.mode, act: S.act, thought: S.thought, plan: S.plan,

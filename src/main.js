@@ -93,7 +93,7 @@ async function start(renderer) {
 
     updateBubble(stage, model.clo.position, V);
     hudT -= rd;
-    if (hudT < 0) { updateHud(view.mood, V, view.viewers, source.connected); hudT = .25; }
+    if (hudT < 0) { updateHud(view.mood, V, view.viewers, source.connected, view.speed); hudT = .25; }
     requestAnimationFrame(frame);
   }
 
