@@ -15,7 +15,7 @@ npm run preview  # preview the build locally
 
 ### One CloClo for everyone
 
-CloClo lives on the server. The server runs the simulation (needs, choices, walking, Biscuit, the garden, the clock) and streams it to every browser over `/api/stream` (Server-Sent Events), five times a second. Browsers only draw what they receive, so everyone watching sees the same CloClo at the same moment, and he keeps living when nobody watches. The world is saved to `data/world.json` every 30 seconds (and on shutdown), so a restart doesn't wipe his life.
+CloClo lives on the server. The server runs the simulation (choices, walking, Biscuit, the garden, the clock) and streams it to every browser over `/api/stream` (Server-Sent Events), five times a second. Browsers only draw what they receive, so everyone watching sees the same CloClo at the same moment, and he keeps living when nobody watches. The world is saved to `data/world.json` every 30 seconds (and on shutdown), so a restart doesn't wipe his life.
 
 ```bash
 npm run dev                                   # dev server with the live world
@@ -63,7 +63,7 @@ src/
   helpers.js          mesh/material helpers, seeded random
   lighting.js         day/night cycle
   controls.js         camera orbit/zoom, buttons
-  hud.js              clock, need bars, diary, thought bubble
+  hud.js              clock, what he is doing and feeling, diary, thought bubble
   particles.js        floating hearts, notes, stars and z's
   world/              Mosdorp: locations, roads, buildings, park, pond, vegetable garden,
                       fountain, ice cream stand, lookout hill, flower meadow,
