@@ -21,6 +21,7 @@ const GRANDMA = [
 // opts.canDecide() / opts.decide(state): an optional language-model brain (see server/sim.js).
 //   decide resolves to { activity, thought, diary, minutes, mood, plan }, or null to let the rules decide.
 // opts.planBuild(state): asks the language model what to build at the block yard → { idea, thought, steps } or null.
+// opts.summarize(state): asks the language model for a summary of his day → { summary } or null.
 export function createBrain(body, cat, writeDiary, opts = {}) {
   const clo = body;
   // the latest diary lines, newest first, to give the language model some memory
@@ -29,12 +30,16 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     writeDiary(txt);
     memory.unshift(txt);
     memory.length = Math.min(memory.length, 8);
+    S.today.push(txt);
   };
+  const dayNumber = () => Math.floor(world.T / 1440) + 1;
   const S = {
     mode: 'choosing', act: null, left: 0, queue: [],
     here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
     last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null,
-    minutes: null, plan: '', mood: 'happy'
+    minutes: null, plan: '', mood: 'happy',
+    // long-term memory: a short summary of each of his last days, and what happened today so far
+    memories: [], today: [], todayActs: []
   };
   clo.position.copy(LOC.home.spot);
   S.face = LOC.home.rot;
@@ -90,7 +95,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.thought = 'Hmm… what shall I do next?';
     Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h, plan: S.plan,
-      previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() },
+      previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories,
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
@@ -118,6 +123,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
 
     const a = ACTS[best];
     S.act = best;
+    S.todayActs.push(best);
     S.last = [best, ...S.last].slice(0, 4);
     const tgt = targetFor(a);
     S.tgt = tgt;
@@ -143,7 +149,45 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
       S.anchor = new THREE.Vector3(L.x, L.b.h + 3.2, L.z);
     } else S.hop = true;
     clo.item = a.item || null;
+    // going to bed for the night: time to remember the day
+    const h = hour();
+    if (S.act === 'sleep' && (h >= 19.5 || h < 6.5)) closeDay();
     if (S.act === 'build') startBuild();
+  }
+
+  // ---- long-term memory ----
+  // At bedtime (or when a day gets very long) his day is summed up in a few sentences: by the
+  // language model in his own words, or by the rules from what he did. He keeps the last 7.
+  const MEMORY_DAYS = 7;
+
+  function closeDay() {
+    // the day that is ending: after midnight it's still yesterday's evening
+    const day = hour() < 6.5 ? dayNumber() - 1 : dayNumber();
+    const lastDay = S.memories.length ? S.memories[S.memories.length - 1].day : 0;
+    if (day <= lastDay || !S.today.length) {
+      // already remembered (a second bedtime in one evening): this goes into tomorrow's memory
+      S.today = S.today.slice(-150);
+      return;
+    }
+    const entries = S.today.slice(), acts = S.todayActs.slice();
+    S.today = [];
+    S.todayActs = [];
+    const remember = text => {
+      S.memories.push({ day, text });
+      if (S.memories.length > MEMORY_DAYS) S.memories.shift();
+      write('My day: ' + text);
+    };
+    if (!opts.summarize || !opts.canDecide()) return remember(rulesSummary(acts));
+    Promise.resolve(opts.summarize({ day, entries, memories: S.memories, idea: yard.idea }))
+      .catch(() => null)
+      .then(out => remember((out && out.summary) || rulesSummary(acts)));
+  }
+
+  function rulesSummary(acts) {
+    const done = [...new Set(acts.filter(k => k !== 'sleep'))].map(k => k === 'build' && yard.idea ? 'built ' + yard.idea : ACTS[k].did);
+    if (!done.length) return 'A quiet day.';
+    const list = done.length > 1 ? done.slice(0, -1).join(', ') + ' and ' + done[done.length - 1] : done[0];
+    return 'I ' + list + '.';
   }
 
   // ---- building at the block yard ----
@@ -158,7 +202,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(rulesPlan());
     S.thought = 'Hmm… what shall I build?';
-    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory };
+    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
     });
@@ -216,6 +260,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
 
   // gd = game minutes elapsed this frame
   function update(gd) {
+    if (S.today.length > 150 && S.mode === 'choosing') closeDay();
     if (S.mode === 'choosing') choose();
     else if (S.mode === 'walking') {
       let step = 2.4 * gd;
@@ -247,5 +292,5 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     if (!(S.mode === 'doing' && S.act === 'swing')) clo.position.y = heightAt(clo.position.x, clo.position.z);
   }
 
-  return { S, memory, update, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
+  return { S, memory, update, closeDay, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
 }

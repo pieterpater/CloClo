@@ -57,7 +57,14 @@ export function brainAvailable() {
 // Plain text only, one line, limited length: this text is shown publicly.
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 
-// Builds the per-decision message from the state the browser sends.
+// His memories of earlier days, oldest first.
+function memoryLines(st) {
+  const m = (Array.isArray(st.memories) ? st.memories : []).slice(-7);
+  if (!m.length) return [];
+  return ['What he remembers of earlier days (oldest first):', ...m.map(d => `- Day ${Number(d.day) || '?'}: ${clean(d.text, 300)}`)];
+}
+
+// Builds the per-decision message from the simulation's state.
 function situation(st) {
   const open = (Array.isArray(st.open) ? st.open : []).filter(k => KEYS.includes(k));
   if (!open.length) throw new Error('no open activities');
@@ -68,6 +75,7 @@ function situation(st) {
     st.previous && KEYS.includes(st.previous) ? `CloClo just finished: ${st.previous}.` : 'CloClo has just woken up for the first time today.',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
     st.yard ? `At the block yard: ${st.yard.blocks ? `${st.yard.blocks} blocks, last built: "${clean(st.yard.idea, 60)}"` : 'nothing built yet'}.` : '',
+    ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
     ...(st.diary || []).slice(0, 8).map(d => `- ${clean(d, 140)}`),
@@ -156,7 +164,7 @@ export async function planBuild(st) {
     clean(st.yard, 4000).replace(/ (x\d)/g, '\n$1') || 'The yard is empty.',
     st.idea ? `The last thing he built there: "${clean(st.idea, 80)}".` : 'He has never built anything here.',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
-    st.yard ? `At the block yard: ${st.yard.blocks ? `${st.yard.blocks} blocks, last built: "${clean(st.yard.idea, 60)}"` : 'nothing built yet'}.` : '',
+    ...memoryLines(st),
     'Recent diary (newest first):',
     ...(st.diary || []).slice(0, 6).map(d => `- ${clean(d, 140)}`),
     '',
@@ -174,6 +182,33 @@ export async function planBuild(st) {
     .map(s => ({ action: s.action, x: s.x, z: s.z, color: s.color }));
   if (!steps.length) throw new Error('no usable building steps');
   return { idea: clean(out.idea, 60) || 'something', thought: clean(out.thought, 100), steps, usage: used };
+}
+
+// ---- long-term memory: his day in a few sentences ----
+const SUMMARY_SCHEMA = {
+  type: 'object',
+  properties: { summary: { type: 'string' } },
+  required: ['summary'],
+  additionalProperties: false
+};
+
+export async function summarizeDay(st) {
+  const entries = (Array.isArray(st.entries) ? st.entries : []).slice(-150).map(e => `- ${clean(e, 140)}`);
+  if (!entries.length) throw new Error('nothing happened today');
+  const text = [
+    `It is the end of Day ${Number(st.day) || '?'} and CloClo is going to bed.`,
+    ...memoryLines(st),
+    st.idea ? `At the block yard stands: "${clean(st.idea, 80)}".` : '',
+    'Everything in his diary today (oldest first):',
+    ...entries,
+    '',
+    'Write how he will remember this day: a short summary in his own words (first person, at most 220 characters). Keep what mattered: what he did, how he felt, friends he saw, anything he wants to continue or try tomorrow.',
+    'Reply with JSON: summary.'
+  ].filter(Boolean).join('\n');
+  const { out, usage: used } = await ask(text, SUMMARY_SCHEMA, 1024);
+  const summary = clean(out.summary, 260);
+  if (!summary) throw new Error('empty summary');
+  return { summary, usage: used };
 }
 
 export const systemPrompt = SYSTEM;

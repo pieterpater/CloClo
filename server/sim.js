@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { world } from '../src/state.js';
 import { createSimulation } from '../src/sim/simulation.js';
-import { MODEL, brainAvailable, decide, planBuild, usage } from './brain.js';
+import { MODEL, brainAvailable, decide, planBuild, summarizeDay, usage } from './brain.js';
 
 const SPEED = Number(process.env.SIM_SPEED) || 1;            // game minutes per real second
 const DATA = process.env.CLOCLO_DATA || 'data/world.json';  // where the world is saved
@@ -12,9 +12,10 @@ const TICK_MS = 100, SEND_MS = 200, SAVE_MS = 30e3;
 
 // Spending guard for the language model: at most this many decisions per minute and per day.
 const PER_MINUTE = Number(process.env.BRAIN_MAX_PER_MINUTE) || 10;
-const PER_DAY = Number(process.env.BRAIN_MAX_PER_DAY) || 3000;
-// Only use the language model while someone is watching (set BRAIN_WHEN_EMPTY=1 to always use it).
-const WHEN_EMPTY = process.env.BRAIN_WHEN_EMPTY === '1';
+const PER_DAY = Number(process.env.BRAIN_MAX_PER_DAY) || 4000;
+// The language model decides around the clock, also when nobody is watching.
+// Set BRAIN_WHEN_EMPTY=0 to use it only while someone watches (cheaper; the rules decide otherwise).
+const WHEN_EMPTY = process.env.BRAIN_WHEN_EMPTY !== '0';
 
 let minute = { start: 0, n: 0 }, day = { start: 0, n: 0 }, backoffUntil = 0, failures = 0;
 const viewers = new Set();
@@ -49,7 +50,8 @@ function limited(fn, describe) {
 const llm = {
   canDecide: () => brainAvailable() && (viewers.size > 0 || WHEN_EMPTY) && Date.now() > backoffUntil && withinLimits(),
   decide: limited(decide, out => out.activity),
-  planBuild: limited(planBuild, out => `build: ${out.idea} (${out.steps.length} steps)`)
+  planBuild: limited(planBuild, out => `build: ${out.idea} (${out.steps.length} steps)`),
+  summarize: limited(summarizeDay, () => 'day summary')
 };
 
 const send = (res, event, data) => res.write(`${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`);

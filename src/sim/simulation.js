@@ -71,7 +71,8 @@ export function createSimulation(opts = {}) {
     const S = brain.S;
     return {
       version: 1, T: world.T, mood: S.mood, yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
-      last: S.last, prev: S.act, plan: S.plan, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
+      last: S.last, prev: S.act, plan: S.plan,
+      memories: S.memories, today: S.today, todayActs: S.todayActs, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
       pos: body.position.toArray(), cat: cat.pos.toArray()
     };
   }
@@ -88,6 +89,9 @@ export function createSimulation(opts = {}) {
     S.last = d.last;
     S.prev = d.prev;
     S.plan = d.plan || '';
+    S.memories = d.memories || [];
+    S.today = d.today || [];
+    S.todayActs = d.todayActs || [];
     S.here = { ang: d.here.ang, pts: d.here.pts.map(a => new THREE.Vector3().fromArray(a)) };
     body.position.fromArray(d.pos);
     body.visible = true;

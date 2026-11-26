@@ -29,14 +29,14 @@ Without the server (static hosting, or the server can't be reached) the page run
 
 ### The language-model brain
 
-With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. At the block yard it also designs what he builds. He has no needs or stats; only opening hours limit what he can do.
+With an API key, **Claude Haiku 5.5** decides everything about CloClo's life: what he does next and for how long, how he feels (shown on his face), the thought he sets off with, his diary lines, and a short plan for later. At the block yard it also designs what he builds. At bedtime it writes a short summary of his day in his own words; he remembers his last 7 days, so he can continue projects and remember friends. He has no needs or stats; only opening hours limit what he can do.
 
 ```bash
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env   # .env is git-ignored (used by npm run dev/preview)
 ANTHROPIC_API_KEY=sk-ant-... npm start        # production
 ```
 
-Without a key CloClo decides with his own rules. He also falls back to his rules when the model returns an error or picks something that isn't open, when a spending limit is reached, and (by default) when nobody is watching.
+Without a key CloClo decides with his own rules. He also falls back to his rules when the model returns an error or picks something that isn't open, and when a spending limit is reached. By default the model decides around the clock, also when nobody is watching (about $0.35 per day, $10–11 per month).
 
 Server settings (environment variables):
 
@@ -44,9 +44,9 @@ Server settings (environment variables):
 |---|---|---|
 | `SIM_SPEED` | 1 | game minutes per real second; while CloClo sleeps the clock runs 6× faster, so a game day takes about 16 minutes |
 | `CLOCLO_DATA` | `data/world.json` | where the world is saved |
-| `BRAIN_MAX_PER_MINUTE` | 10 | language-model decisions per minute |
-| `BRAIN_MAX_PER_DAY` | 3000 | language-model decisions per day (≈ $0.30 per day at most) |
-| `BRAIN_WHEN_EMPTY` | off | `1`: also use the language model when nobody is watching |
+| `BRAIN_MAX_PER_MINUTE` | 10 | language-model calls per minute |
+| `BRAIN_MAX_PER_DAY` | 4000 | language-model calls per day (≈ $0.45 per day at most) |
+| `BRAIN_WHEN_EMPTY` | on | `0`: only use the language model while someone watches (cheaper; the rules decide otherwise) |
 
 The server logs every decision with its tokens and cost. `GET /api/brain` shows the brain, the number of viewers, the running totals and today's decisions.
 
@@ -97,6 +97,6 @@ The world is built in a fixed order (`world/index.js`) because trees, stones and
 ## Next steps
 
 1. **Hosting**: see [DEPLOY.md](DEPLOY.md) for an Ubuntu VPS.
-2. **Longer memory**: the language model now sees CloClo's last 8 diary lines; a daily summary would let him remember yesterday.
+2. **Perception**: tell the model more about what happens around him (where Biscuit is, weather, changes in the village).
 3. **Moderation** of all text shown publicly.
 4. **Better 3D models** (Blender or asset packs) and more events: weather, seasons and random happenings.
