@@ -10,6 +10,7 @@ import { updateLight } from './lighting.js';
 import { cam, setupControls, updateCamera } from './controls.js';
 import { write, setupHud, updateHud, updateBubble } from './hud.js';
 import { updateParticles } from './particles.js';
+import { detectLLM } from './clo/llm.js';
 
 const stage = document.getElementById('stage');
 
@@ -34,6 +35,11 @@ function start(renderer) {
   setupControls(stage);
   setupHud();
   write('Good morning, Mosdorp! What shall I do today?');
+  detectLLM().then(l => {
+    document.getElementById('brainNote').textContent = l.enabled
+      ? 'CloClo’s choices, thoughts and diary are written live by a language model (Claude Haiku 5.5), based on his needs and the time of day.'
+      : 'Prototype: CloClo currently decides for himself using simple rules based on his needs. In a next step, a language model takes over those choices and the world runs on a server, so everyone sees the same thing.';
+  });
 
   const clock = new THREE.Clock();
   let anim = 0, hudT = 0;

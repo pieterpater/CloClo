@@ -42,6 +42,12 @@ export function animateCloClo(model, S, anim, rd, mood, isNight) {
     feet[1].position.z = .2 - Math.sin(w) * .25;
     arms[0].rotation.x = Math.sin(w) * .6;
     arms[1].rotation.x = -Math.sin(w) * .6;
+  } else if (S.mode === 'thinking') {
+    // pondering: head tilted, hand on chin, eyes up
+    body.rotation.z = Math.sin(anim * 1.2) * .1;
+    arms[1].rotation.x = -1.3;
+    arms[1].rotation.z = .5;
+    lookGoal.set(.04, .07);
   } else if (s === 'eat') {
     const b = Math.abs(Math.sin(anim * 5));
     body.scale.set(1 + b * .06, 1 - b * .06, 1 + b * .06);

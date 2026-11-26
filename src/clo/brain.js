@@ -1,13 +1,14 @@
 import * as THREE from 'three';
-import { world, hour } from '../state.js';
+import { world, hour, dayLabel } from '../state.js';
 import { pick, clamp } from '../helpers.js';
 import { LOC, heightAt } from '../world/locations.js';
 import { garden } from '../world/garden.js';
 import { catMeet, catRelease } from '../world/cat.js';
 import { ACTS, DECAY } from './acts.js';
+import { shouldAsk, askLLM } from './llm.js';
 
 // CloClo's brain: needs, choices and walking routes.
-// Modes: 'choosing' → 'walking' → 'doing' → 'choosing' …
+// Modes: 'choosing' → ('thinking' while the language model answers) → 'walking' → 'doing' → 'choosing' …
 // Sometimes a letter from Grandma is waiting when he wakes up.
 const GRANDMA = [
   'A letter from Grandma on the doormat! She says hi to the ducks.',
@@ -15,13 +16,20 @@ const GRANDMA = [
   'Grandma’s letter says she is knitting me a scarf. Yellow, my favourite!'
 ];
 
-export function createBrain(model, write) {
+export function createBrain(model, writeDiary) {
   const { clo, items } = model;
+  // the latest diary lines, newest first, to give the language model some memory
+  const memory = [];
+  const write = txt => {
+    writeDiary(txt);
+    memory.unshift(txt);
+    memory.length = Math.min(memory.length, 8);
+  };
   const need = { fullness: 72, energy: 82, fun: 55, curiosity: 65, company: 60 };
   const S = {
     mode: 'choosing', act: null, left: 0, queue: [],
     here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
-    last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false
+    last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null
   };
   clo.position.copy(LOC.home.spot);
   clo.rotation.y = LOC.home.rot;
@@ -55,15 +63,47 @@ export function createBrain(model, write) {
     return q;
   }
 
-  function choose() {
-    const h = hour();
-    let best = null, bs = -1;
+  // CloClo's own rules: score every activity on his needs and the hour, plus some chance.
+  function ruleChoice(h) {
+    let best = null, bs = -Infinity;
     for (const k in ACTS) {
       let s = ACTS[k].score(need, h) + Math.random() * 25;
       const recent = S.last.indexOf(k);
       if (recent >= 0) s *= [.3, .5, .7, .85][recent];
       if (s > bs) { bs = s; best = k; }
     }
+    return best;
+  }
+
+  const isOpen = (k, h) => ACTS[k].score(need, h) > -500;
+
+  function choose() {
+    const h = hour();
+    if (!shouldAsk(world.speed)) return start(ruleChoice(h));
+    // ask the language model; meanwhile CloClo stands and ponders
+    S.mode = 'thinking';
+    S.thought = 'Hmm… what shall I do next?';
+    askLLM({
+      time: dayLabel(world.T), hour: h,
+      previous: S.prev, needs: need, last: S.last, diary: memory,
+      open: Object.keys(ACTS).filter(k => isOpen(k, h))
+    }).then(out => {
+      if (S.mode !== 'thinking') return;
+      const now = hour();
+      if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary);
+      else start(ruleChoice(now));
+    });
+  }
+
+  // Set off to do `best`. `thought` and `diary` come from the language model, if it answered.
+  function start(best, thought, diary) {
+    // a diary line about what he just finished
+    const prev = S.prev && ACTS[S.prev];
+    if (diary) write(diary);
+    else if (prev && Math.random() < .75) write(pick(prev.end));
+    if (S.prev === 'sleep' && Math.random() < .3) write(pick(GRANDMA));
+    S.prev = null;
+
     const a = ACTS[best];
     S.act = best;
     S.last = [best, ...S.last].slice(0, 4);
@@ -72,7 +112,7 @@ export function createBrain(model, write) {
     S.queue = route(S.here, tgt);
     S.here = { ang: tgt.ang, pts: tgt.pts };
     if (tgt.cat) catMeet(tgt.cat, tgt.pts[0]);
-    S.thought = pick(a.why);
+    S.thought = thought || pick(a.why);
     write(S.thought);
     S.mode = 'walking';
     clo.visible = true;
@@ -94,9 +134,7 @@ export function createBrain(model, write) {
   }
 
   function finish() {
-    const a = ACTS[S.act];
-    if (Math.random() < .75) write(pick(a.end));
-    if (S.act === 'sleep' && Math.random() < .3) write(pick(GRANDMA));
+    S.prev = S.act;
     if (S.act === 'cat') catRelease();
     for (const k in items) items[k].visible = false;
     clo.visible = true;

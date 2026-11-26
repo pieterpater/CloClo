@@ -32,7 +32,7 @@ export function updateHud(need, S) {
   const a = ACTS[S.act];
   if (!a) return;
   const L = LOC[a.loc];
-  nowTxt.textContent = S.mode === 'walking'
+  nowTxt.textContent = S.mode === 'thinking' ? 'is deciding what to do next' : S.mode === 'walking'
     ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
     : a.txt;
   nowLoc.textContent = L.name;
