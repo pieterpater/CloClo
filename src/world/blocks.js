@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, box, bulbMat } from '../helpers.js';
-import { LOC } from './locations.js';
+import { LOC, heightAt } from './locations.js';
 import { lamps } from './lamps.js';
-import { SIZE } from '../sim/blocks.js';
 import { emit } from '../particles.js';
 
-// Draws the block yard and whatever CloClo has built there (the blocks themselves come from sim/blocks.js).
-const CELL = .9, BLOCK = .84, HALF = (SIZE - 1) / 2 * CELL;
+// Draws the block yard (his workshop with the crate) and all blocks in the village (they come from sim/blocks.js).
+// the yard's sandy plot keeps its old size; blocks themselves stand on the village grid (1 m spots)
+const SIZE = 8, CELL = .9, BLOCK = .94;
 const COLOURS = { r: 0xe63946, o: 0xf4a261, y: 0xffd166, g: 0x52b788, b: 0x4cc9f0, p: 0x9b5de5, w: 0xf8f9fa };
 const geo = new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK);
 let group = null, last = null;
@@ -52,33 +52,33 @@ export function buildBlockYard() {
   lamps.push(light); // lighting.js turns it on at dusk, like the street lamps
 }
 
-// yard: the compact string from the simulation, e.g. "rry,,b.b,…" (one group per spot, bottom to top, '.' = empty)
+// yard: the compact string from the simulation, "x,z:letters;…" per stack ('.' = empty level),
+// with x, z spots on the village grid (1 m apart)
 export function updateBlockYard(yard, anim) {
   if (yard != null && yard !== last) {
     const firstTime = last === null;
-    const cols = yard.split(',');
     const want = new Map();
-    for (let i = 0; i < SIZE * SIZE; i++) {
-      const x = i % SIZE, z = Math.floor(i / SIZE);
-      [...(cols[i] || '')].forEach((c, level) => { if (c !== '.') want.set(`${x},${z},${level}`, c); });
+    for (const part of yard ? yard.split(';') : []) {
+      const [k, letters = ''] = part.split(':');
+      [...letters].forEach((c, level) => { if (c !== '.') want.set(`${k},${level}`, c); });
     }
     // remove blocks that are gone or changed colour (a few sparkles when he tidies up)
     let sparkles = 0;
-    for (const [key, m] of meshes) {
-      if (want.get(key) !== m.userData.c) {
-        if (!firstTime && sparkles++ < 3) emit('sparkle', m.getWorldPosition(tmp));
-        group.remove(m);
-        meshes.delete(key);
+    for (const [k, m] of meshes) {
+      if (want.get(k) !== m.userData.c) {
+        if (!firstTime && sparkles++ < 3) emit('sparkle', m.position);
+        scene.remove(m);
+        meshes.delete(k);
       }
     }
     // add new ones; they pop in (except when the page has just opened)
-    for (const [key, c] of want) {
-      if (meshes.has(key)) continue;
-      const [x, z, level] = key.split(',').map(Number);
-      const m = mesh(geo, mat(COLOURS[c] ?? 0xffffff), -HALF + x * CELL, .1 + BLOCK / 2 + level * BLOCK, HALF - z * CELL, group);
+    for (const [k, c] of want) {
+      if (meshes.has(k)) continue;
+      const [x, z, level] = k.split(',').map(Number);
+      const m = mesh(geo, mat(COLOURS[c] ?? 0xffffff), x, heightAt(x, z) + BLOCK / 2 + level * BLOCK, z);
       m.userData = { c, born: firstTime ? -10 : anim };
-      meshes.set(key, m);
-      if (!firstTime) emit('sparkle', m.getWorldPosition(tmp).setY(m.position.y + .6));
+      meshes.set(k, m);
+      if (!firstTime) emit('sparkle', tmp.copy(m.position).setY(m.position.y + .7));
     }
     last = yard;
   }

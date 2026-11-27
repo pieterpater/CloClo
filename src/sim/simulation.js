@@ -51,7 +51,7 @@ export function createSimulation(opts = {}) {
       t: Date.now(), T: r2(world.T), speed: world.speed * (asleep() ? SLEEP_SPEEDUP : 1),
       clo: {
         x: r2(p.x), y: r2(p.y), z: r2(p.z), face: r2(S.face), visible: body.visible, item: body.item,
-        mode: S.mode, act: S.act, thought: S.thought, plan: S.plan,
+        mode: S.mode, act: S.act, thought: S.thought, plan: S.plan, moving: !!S.moving,
         anchor: S.anchor ? [S.anchor.x, S.anchor.y, S.anchor.z] : null,
         hop: hopN, wow: wowN
       },

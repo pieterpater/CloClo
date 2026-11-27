@@ -36,7 +36,7 @@ export function animateCloClo(model, S, anim, rd, moodName, isNight) {
   lookGoal.set(look.x, look.y);
 
   const w = anim * (world.speed > 1 ? 14 : 10);
-  if (S.mode === 'walking') {
+  if (S.mode === 'walking' || S.moving) {
     const bounce = mood > 60 ? .24 : mood > 35 ? .18 : .1;
     body.position.y = Math.abs(Math.sin(w)) * bounce;
     body.rotation.z = Math.sin(w) * .07;

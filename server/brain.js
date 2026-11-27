@@ -2,7 +2,8 @@
 // Runs on the server only, so the API key never reaches the browser.
 import Anthropic from '@anthropic-ai/sdk';
 import { ACTIVITY_INFO } from '../src/sim/catalog.js';
-import { COLOURS, SIZE, MAX_H } from '../src/sim/blocks.js';
+import { COLOURS, MAX_H, MAX_BLOCKS, RADIUS } from '../src/sim/blocks.js';
+import { LOC } from '../src/world/locations.js';
 
 export const MODEL = 'claude-haiku-5-5';
 // Claude Haiku 5.5 prices in USD per million tokens (prompts up to 100K tokens).
@@ -76,7 +77,7 @@ function situation(st) {
     `It is ${clean(st.time, 30)} (${part}).`,
     st.previous && KEYS.includes(st.previous) ? `CloClo just finished: ${st.previous}.` : 'CloClo has just woken up for the first time today.',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
-    st.yard ? `At the block yard: ${st.yard.blocks ? `${st.yard.blocks} blocks, last built: "${clean(st.yard.idea, 60)}"` : 'nothing built yet'}.` : '',
+    st.yard ? `Blocks in the village: ${st.yard.blocks ? `${st.yard.blocks}, last built: "${clean(st.yard.idea, 70)}"` : 'none yet'}.` : '',
     ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -143,13 +144,16 @@ const BUILD_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          action: { type: 'string', enum: ['place', 'remove', 'clear'] },
+          action: { type: 'string', enum: ['place', 'remove', 'move', 'clear'] },
           x: { type: 'integer' },
           z: { type: 'integer' },
           y: { type: 'integer' },
-          color: { type: 'string', enum: COLOURS }
+          color: { type: 'string', enum: COLOURS },
+          to_x: { type: 'integer' },
+          to_z: { type: 'integer' },
+          to_y: { type: 'integer' }
         },
-        required: ['action', 'x', 'z', 'y', 'color'],
+        required: ['action', 'x', 'z', 'y', 'color', 'to_x', 'to_z', 'to_y'],
         additionalProperties: false
       }
     }
@@ -159,38 +163,51 @@ const BUILD_SCHEMA = {
 };
 const MAX_STEPS = 24;
 
+// The village map for the language model: every place with its position.
+const MAP = [
+  'Village map: x grows to the east, z grows to the south; the fountain on the square is at (0, 0).',
+  `Blocks can go on any spot with whole-number x and z within ${RADIUS} of the fountain, except inside buildings, in the pond, on the fountain and on the vegetable beds.`,
+  ...Object.values(LOC).filter(L => L.name !== 'Square').map(L => `- ${L.name}: (${Math.round(L.x)}, ${Math.round(L.z)})${L.b ? ', a building about ' + Math.round(Math.max(L.b.w, L.b.d)) + ' wide' : ''}`),
+  '- The roads run in straight lines from the square to each place.'
+].join('\n');
+
 export async function planBuild(st) {
+  const here = st.here || { x: 0, z: 0 };
   const text = [
-    'CloClo is at the block yard and is about to build. You design what he builds.',
-    `The yard is a grid of ${SIZE} by ${SIZE} spots: x goes from 0 to ${SIZE - 1}, left to right as he faces it; z goes from 0 (the front, closest to him) to ${SIZE - 1} (the back). y is the level: 0 is the ground, up to ${MAX_H - 1}.`,
-    `Colours: ${COLOURS.join(', ')}.`,
-    'What stands there now, per spot, from level 0 up ("_" is an empty level):',
-    clean(st.yard, 6000).replace(/ (x\d)/g, '\n$1') || 'The yard is empty.',
-    st.idea ? `The last thing he built there: "${clean(st.idea, 80)}".` : 'He has never built anything here.',
-    st.crowded ? 'The yard is getting crowded: he should tidy up first (a "clear" step) and then build something new.' : '',
+    `CloClo is at the block yard, with a crate full of blocks, and is about to build. You design what he builds, and where: anywhere in the village. He walks to each spot himself.`,
+    MAP,
+    `He is at (${Number(here.x) || 0}, ${Number(here.z) || 0}). y is the level: 0 is the ground, up to ${MAX_H - 1}. Colours: ${COLOURS.join(', ')}.`,
+    `Blocks in the village now (${Number(st.blocks) || 0} of at most ${MAX_BLOCKS}), per spot from level 0 up ("_" is an empty level):`,
+    clean(st.yard, 12000).replace(/ (Near |\()/g, '\n$1') || 'There are no blocks anywhere yet.',
+    st.idea ? `The last thing he built: "${clean(st.idea, 80)}".` : 'He has never built anything.',
+    st.crowded ? 'There are a lot of blocks around: he should tidy something up first ("clear" or "remove") before building more.' : '',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
     ...memoryLines(st),
     'Recent diary (newest first):',
     ...(st.diary || []).slice(0, 6).map(d => `- ${clean(d, 140)}`),
     '',
-    `He can add to what is there, change it, or tidy up and start something new. He likes to start fresh now and then. Use up to ${MAX_STEPS} steps, in the order he does them:`,
-    '- "place": a block of that colour at spot x, z. With y = -1 it goes on top of the stack; with a level y it goes exactly there, but only if it rests on a block below it or touches a block beside it at the same level (so bridges, arches and windows are possible).',
+    `He can build something new anywhere, add to or change what is there, move blocks around, or tidy up. Use up to ${MAX_STEPS} steps, in the order he does them (fields a step doesn't use can be 0):`,
+    '- "place": a block of that colour at spot (x, z). y = -1 puts it on top of the stack; a level y puts it exactly there, but only if it rests on a block below or touches a block beside it at the same level (so bridges, arches and windows are possible).',
     '- "remove": takes a block away: the top one with y = -1, or the one at level y.',
-    '- "clear": puts every block back in the crate (x, z, y and color don\'t matter). Use it as the first step to start fresh.',
+    '- "move": picks up the block at (x, z) level y (-1 = the top one) and puts it at (to_x, to_z) level to_y (-1 = on top).',
+    '- "clear": puts every block within 2 spots of (x, z) back in the crate.',
     'Reply with JSON:',
-    '- idea: what he is building, a short phrase like "a tower for Biscuit" or "a bridge for the ducks" (at most 50 characters).',
+    '- idea: what he is building, a short phrase like "a tower for Biscuit by the fountain" or "a bridge by the pond" (at most 60 characters).',
     '- thought: what he thinks as he starts (at most 70 characters, first person).',
     '- steps: the building steps.'
   ].filter(Boolean).join('\n');
   const { out, usage: used } = await ask(text, BUILD_SCHEMA, 3000);
-  const ok = n => Number.isInteger(n) && n >= 0 && n < SIZE;
+  const ok = n => Number.isInteger(n) && Math.abs(n) <= RADIUS;
   const okY = y => Number.isInteger(y) && y >= -1 && y < MAX_H;
   const steps = (out.steps || [])
-    .filter(s => s.action === 'clear' || ((s.action === 'place' || s.action === 'remove') && ok(s.x) && ok(s.z) && okY(s.y) && COLOURS.includes(s.color)))
+    .filter(s => ok(s.x) && ok(s.z) && (
+      s.action === 'clear' ||
+      ((s.action === 'place' || s.action === 'remove') && okY(s.y) && COLOURS.includes(s.color)) ||
+      (s.action === 'move' && okY(s.y) && ok(s.to_x) && ok(s.to_z) && okY(s.to_y))))
     .slice(0, MAX_STEPS)
-    .map(s => (s.action === 'clear' ? { action: 'clear' } : { action: s.action, x: s.x, z: s.z, y: s.y, color: s.color }));
+    .map(s => ({ action: s.action, x: s.x, z: s.z, y: s.y, color: s.color, to_x: s.to_x, to_z: s.to_z, to_y: s.to_y }));
   if (!steps.length) throw new Error('no usable building steps');
-  return { idea: clean(out.idea, 60) || 'something', thought: clean(out.thought, 100), steps, usage: used };
+  return { idea: clean(out.idea, 70) || 'something', thought: clean(out.thought, 100), steps, usage: used };
 }
 
 // ---- long-term memory: his day in a few sentences ----

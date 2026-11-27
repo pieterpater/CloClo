@@ -4,7 +4,7 @@ import { pick } from './util.js';
 import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
-import { yard, applyStep, rulesPlan, describeYard, blockCount, expandClear, SIZE, CAPACITY } from './blocks.js';
+import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
 // decides freely, and without it simple rules pick something that suits the time of day.
@@ -205,64 +205,91 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     return 'I ' + list + '.';
   }
 
-  // ---- building at the block yard ----
-  // On arrival he works out what to build (the language model, or the rules), then places one block
-  // every few game minutes, and admires the result for a bit.
-  const STEP_MINUTES = 3;
+  // ---- building, anywhere in the village ----
+  // He starts at the block yard (his workshop with the crate) and works out what to build: the
+  // language model, or the rules. Then he walks to each spot, places, takes or moves a block there,
+  // and admires the result for a bit.
+  const STEP_MINUTES = 2;
 
   function startBuild() {
     S.left = 1e9; // until the building is done
-    S.build = { steps: null, t: 0 };
+    S.build = { steps: null, t: 0, carry: null };
     S.tNext = world.T + 1e9;
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(rulesPlan());
     S.thought = pickNew(DESIGNING);
-    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories, crowded: blockCount() > CAPACITY * .15 };
+    const p = clo.position;
+    const ask = {
+      yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
+      blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) }
+    };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
     });
   }
 
   function setBuildPlan(plan) {
-    S.build.steps = expandClear(plan.steps);
+    S.build.steps = expandSteps(plan.steps);
     yard.idea = plan.idea;
     S.thought = plan.thought || pick(ACTS.build.why);
     write(S.thought);
     S.tNext = world.T + 1e9; // his own thought stays up while he builds
   }
 
-  // where spot (x, z) of the grid is in the world
-  function spotPos(x, z) {
-    const L = LOC.blocks, half = (SIZE - 1) / 2 * .9, lx = -half + x * .9, lz = half - z * .9;
-    return { x: L.x + lx * Math.cos(L.rot) + lz * Math.sin(L.rot), z: L.z - lx * Math.sin(L.rot) + lz * Math.cos(L.rot) };
+  // walk in a straight line towards (x, z); true once he is there
+  function walkTowards(x, z, gd) {
+    tmp.set(x - clo.position.x, 0, z - clo.position.z);
+    const d = tmp.length(), step = 2.4 * gd;
+    if (d <= step) { clo.position.x = x; clo.position.z = z; S.moving = false; return true; }
+    clo.position.addScaledVector(tmp, step / d);
+    S.face = Math.atan2(tmp.x, tmp.z);
+    S.moving = true;
+    return false;
   }
 
   function stepBuild(gd) {
     const b = S.build;
     if (!b || !b.steps) return;
+    // walking to the next spot: he stands just beside it, on the side he comes from
+    if (b.go) {
+      if (!walkTowards(b.go.x, b.go.z, gd)) return;
+      b.go = null;
+      b.t = STEP_MINUTES;
+    }
     b.t -= gd;
     if (b.t > 0) return;
     while (b.steps.length) {
-      const st = b.steps.shift();
-      if (!applyStep(st)) continue; // a full or empty spot: skip it
-      const p = spotPos(st.x, st.z);
-      S.face = Math.atan2(p.x - clo.position.x, p.z - clo.position.z);
-      S.placed = (S.placed || 0) + 1; // viewers see a new block appear
+      const st = b.steps[0];
+      const dx = st.x - clo.position.x, dz = st.z - clo.position.z, d = Math.hypot(dx, dz);
+      if (d > 1.6 || d < .6) {
+        const k = d > .01 ? 1.1 / d : 0;
+        b.go = { x: st.x - dx * k + (d > .01 ? 0 : 1.1), z: st.z - dz * k };
+        return;
+      }
+      b.steps.shift();
+      const v = applyStep(st, b.carry);
+      if (v < 0) continue; // a full, empty or forbidden spot: skip it
+      if (st.action === 'take') b.carry = v;
+      if (st.action === 'put') b.carry = null;
+      S.face = Math.atan2(dx, dz);
       b.t = st.action === 'clearcol' ? 1 : STEP_MINUTES; // tidying up goes quicker than building
       return;
     }
     // done: admire it for a moment
     b.steps = null;
     S.build = null;
+    S.moving = false;
     S.left = 8;
     S.thought = pickNew(FINISHED);
-    S.face = S.tgt.face;
     S.tNext = world.T + 4;
+    // he is somewhere in the village now: start the next walk from here
+    S.here = { ang: Math.atan2(clo.position.z, clo.position.x), pts: [clo.position.clone().setY(0)] };
   }
 
   function finish() {
     S.prev = S.act;
     S.build = null;
+    S.moving = false;
     if (S.act === 'cat') cat.release();
     clo.item = null;
     clo.visible = true;
