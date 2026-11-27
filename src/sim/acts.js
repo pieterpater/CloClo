@@ -1,4 +1,5 @@
 import { night } from '../state.js';
+import { messCount } from './tidy.js';
 
 // Everything CloClo can do. With the language model, it decides freely what he does and for how long
 // (see server/brain.js); `score` and `dur` are only used by the simple rules when the model isn't.
@@ -137,6 +138,15 @@ export const ACTS = {
     why: ['To the block yard! I have an idea.', 'I want to build something with the blocks.'],
     mid: ['One more on top…', 'Careful, careful…', 'This one goes here!'],
     end: ['I built something! I’ll show Biscuit.', 'My building is finished. For now.']
+  },
+  tidy: {
+    did: 'tidied up blocks around the village', loc: 'blocks', txt: 'is tidying up blocks around the village', item: 'block', fx: ['sparkle', 2.2],
+    // the rules tidy more eagerly the more mess there is
+    score: h => day(h) ? Math.min(80, 10 + messCount()) : AWKWARD, mood: 'happy',
+    dur: () => 40,
+    why: ['Look at all these blocks lying around. Tidy-up time!', 'Let’s make Mosdorp neat again.'],
+    mid: ['Back in the crate you go!', 'One more…', 'So much tidier already.'],
+    end: ['The village looks so neat now.', 'All tidied up. The neighbours will be happy.']
   },
   feed_ducks: {
     did: 'fed the ducks', loc: 'pond', txt: 'is feeding the ducks', item: 'bread', fx: ['heart', 3],

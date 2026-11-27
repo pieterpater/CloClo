@@ -9,6 +9,9 @@ import { LOC, NEIGHBOURS } from '../world/locations.js';
 import { hasPrize, inYard, messCount } from './tidy.js';
 
 export const MAX_H = 12, MAX_BLOCKS = 400, RADIUS = 58;
+// at most this many blocks may lie around the village outside the block yard; past it, new blocks
+// only go in the yard (so the village can't fill up with clutter)
+export const MESS_MAX = 60;
 export const LEVEL = .94; // the height of one block, in metres
 // 'gold' is a prize for tidying up (see tidy.js); until he has it, gold blocks come out yellow
 export const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white', 'gold'];
@@ -69,6 +72,7 @@ export function applyStep(st, carrying = null) {
   let i = st.action === 'put' ? carrying : COLOURS.indexOf(st.color);
   if (COLOURS[i] === 'gold' && !hasPrize('gold')) i = COLOURS.indexOf('yellow');
   if (i == null || i < 0 || blocked(st.x, st.z) || blockCount() >= MAX_BLOCKS) return -1;
+  if (!inYard(st.x, st.z) && messCount() >= MESS_MAX) return -1; // the village is full: only the yard
   const col = c || [];
   let level = y;
   if (level < 0) level = col.length;
@@ -156,6 +160,24 @@ export function describeYard() {
     groups.get(place).push(`(${x}, ${z}): ${c.map(i => (i == null ? '_' : COLOURS[i])).join(', ')}`);
   }
   return [...groups].map(([place, lines]) => `Near ${place}:\n${lines.join('\n')}`).join('\n');
+}
+
+// A tidy-up round: the stacks lying around the village, in a walking order (each time the nearest
+// one still left), starting from where he is. Up to `n` stacks; every block goes back in the crate.
+export function tidyPlan(fromX, fromZ, n = 20) {
+  const left = [...yard.cols.keys()].map(k => k.split(',').map(Number)).filter(([x, z]) => !inYard(x, z));
+  const steps = [];
+  let px = fromX, pz = fromZ;
+  while (left.length && steps.length < n) {
+    let bi = 0, bd = Infinity;
+    left.forEach(([x, z], i) => { const d = Math.hypot(x - px, z - pz); if (d < bd) { bd = d; bi = i; } });
+    const [x, z] = left.splice(bi, 1)[0];
+    steps.push({ action: 'clearcol', x, z });
+    px = x; pz = z;
+  }
+  return steps.length
+    ? { idea: null, thought: 'Tidy-up time! Every block back in the crate.', steps }
+    : { idea: null, thought: 'Everything is tidy already. Lovely!', steps };
 }
 
 // Without the language model: a small, simple plan. The more blocks lie around the village, the more

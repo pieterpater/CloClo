@@ -38,7 +38,7 @@ export function updateHud(mood, S, viewers, connected, speed, tidy) {
   nowTxt.textContent = S.mode === 'thinking' ? 'is deciding what to do next' : S.mode === 'stuck' ? 'is stuck: blocks are in the way' : S.mode === 'walking'
     ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
     : S.act === 'build' && S.idea ? 'is building ' + S.idea : a.txt;
-  nowLoc.textContent = L.name;
+  nowLoc.textContent = S.act === 'tidy' && S.mode === 'doing' ? 'Around the village' : L.name;
   planEl.hidden = !S.plan;
   planEl.textContent = S.plan ? 'Plan: ' + S.plan : '';
 }

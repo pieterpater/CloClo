@@ -8,7 +8,7 @@ import { TRICKS, TRICK_NAMES } from './pip.js';
 import { planWalk, cellOf, wayOut, floorsAt } from './walk.js';
 import { LEVEL } from './blocks.js';
 import { settle, nightly, tidy, messCount, nextPrize } from './tidy.js';
-import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
+import { yard, applyStep, rulesPlan, tidyPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS, MESS_MAX } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
 // decides freely, and without it simple rules pick something that suits the time of day.
@@ -142,7 +142,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories, stuck: S.stuck,
       boxed: S.boxed, floor: S.floor,
-      tidy: { stars: tidy.stars, mess: messCount(), next: nextPrize(), news: S.tidyNews },
+      tidy: { stars: tidy.stars, mess: messCount(), max: MESS_MAX, next: nextPrize(), news: S.tidyNews },
       // boxed in, the only thing he can do is build: take blocks away
       open: S.boxed ? ['build'] : Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
@@ -184,7 +184,11 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.queue = walk.pts;
     S.blockedWay = !walk.reached;
     S.buildHere = false;
-    if (best === 'build' && (S.blockedWay || S.escape || S.boxed)) {
+    if (best === 'tidy') {
+      // tidying starts right where he is: he walks from stack to stack himself
+      S.queue = [];
+      S.blockedWay = false;
+    } else if (best === 'build' && (S.blockedWay || S.escape || S.boxed)) {
       // can't get to the block yard (or must clear a way out): he builds right where he is
       S.queue = [];
       S.blockedWay = false;
@@ -238,7 +242,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     // going to bed for the night: time to remember the day
     const h = hour();
     if (S.act === 'sleep' && (h >= 19.5 || h < 6.5)) closeDay();
-    if (S.act === 'build') startBuild();
+    if (S.act === 'build' || S.act === 'tidy') startBuild();
     if (S.act === 'sleep' && (h >= 19.5 || h < 6.5)) pip.bedtime();
     if (S.act === 'walk_pip') pip.walkies(180);
     if (S.act === 'train_pip') pip.startTraining(clo.position, S.face, S.trick);
@@ -300,6 +304,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       S.escape = false;
       return setBuildPlan(escapePlan());
     }
+    if (S.act === 'tidy') return setBuildPlan(tidyPlan(clo.position.x, clo.position.z));
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(S.buildHere ? escapePlan() : rulesPlan());
     S.thought = pickNew(DESIGNING);
@@ -308,7 +313,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
       blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) },
       inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null, floor: S.floor,
-      tidy: { stars: tidy.stars, mess: messCount(), next: nextPrize() }, gold: tidy.prizes.includes('gold')
+      tidy: { stars: tidy.stars, mess: messCount(), next: nextPrize() }, gold: tidy.prizes.includes('gold'), messMax: MESS_MAX
     };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || (S.buildHere ? escapePlan() : rulesPlan()));
@@ -317,8 +322,8 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
 
   function setBuildPlan(plan) {
     S.build.steps = expandSteps(plan.steps);
-    yard.idea = plan.idea;
-    S.thought = plan.thought || pick(ACTS.build.why);
+    if (plan.idea) yard.idea = plan.idea;
+    S.thought = plan.thought || pick(ACTS[S.act].why);
     write(S.thought);
     S.tNext = world.T + 1e9; // his own thought stays up while he builds
   }
@@ -461,7 +466,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       const a = ACTS[S.act];
       S.left -= gd;
       if (S.act === 'gardening') garden.growth = Math.min(1.6, garden.growth + gd * .004);
-      if (S.act === 'build') stepBuild(gd);
+      if (S.act === 'build' || S.act === 'tidy') stepBuild(gd);
       if (S.act === 'fish' && Math.random() < gd * .012) {
         S.thought = pickNew(BITES);
         S.wow = true;

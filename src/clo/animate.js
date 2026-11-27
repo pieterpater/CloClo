@@ -113,7 +113,7 @@ export function animateCloClo(model, S, anim, rd, moodName, isNight) {
     arms[0].rotation.z = -1.2;
     mouthOpen = true;
     lookGoal.set(Math.sin(anim * 1.7) * .05, .05);
-  } else if (s === 'build') {
+  } else if (s === 'build' || s === 'tidy') {
     // reach out, put a block down, straighten up
     const reach = (Math.sin(anim * 2.4) + 1) / 2;
     arms[1].rotation.x = -.4 - reach * 1.1;

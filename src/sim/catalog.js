@@ -21,5 +21,6 @@ export const ACTIVITY_INFO = {
   feed_rabbits: 'Give carrots to Bun and Bean, the rabbits in the hutch at the Little farm.',
   train_pip: 'Teach Pip the puppy a trick on the training field (sit, give a paw, jump over the hurdle, roll over, fetch the ball). He gets better each time he practises.',
   walk_pip: 'Get Pip from his doghouse beside CloClo’s house; Pip then follows CloClo around for a few hours, wherever he goes.',
-  build: 'Build with blocks in seven colours, anywhere in the village: towers, houses, bridges, animals, anything. He fetches the blocks from the crate at the block yard. What he builds stays, so he can add to it, move things around, or tidy up and start over another day. When he gets to the yard you design what he builds and where. Building is also how he takes away blocks that are in his way.'
+  build: 'Build with blocks in seven colours, anywhere in the village: towers, houses, bridges, animals, anything. He fetches the blocks from the crate at the block yard. What he builds stays, so he can add to it, move things around, or tidy up and start over another day. When he gets to the yard you design what he builds and where. Building is also how he takes away blocks that are in his way.',
+  tidy: 'Tidy up: walk around the village and put the blocks lying around (outside the block yard) back in the crate, nearest first, about 20 stacks in one go. Quick, and every block taken away from around the village can earn a tidy star.'
 };
