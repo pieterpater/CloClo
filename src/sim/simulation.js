@@ -54,7 +54,7 @@ export function createSimulation(opts = {}) {
       t: Date.now(), T: r2(world.T), speed: world.speed * (asleep() ? SLEEP_SPEEDUP : 1),
       clo: {
         x: r2(p.x), y: r2(p.y), z: r2(p.z), face: r2(S.face), visible: body.visible, item: body.item,
-        mode: S.mode, act: S.act, thought: S.thought, plan: S.plan, moving: !!S.moving,
+        mode: S.mode, act: S.act, thought: S.thought, plan: S.plan, moving: !!S.moving, climbing: !!S.climbing, floor: S.floor,
         anchor: S.anchor ? [S.anchor.x, S.anchor.y, S.anchor.z] : null,
         hop: hopN, wow: wowN
       },
@@ -80,7 +80,7 @@ export function createSimulation(opts = {}) {
       version: 1, T: world.T, mood: S.mood, yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
       last: S.last, prev: S.act, plan: S.plan,
       memories: S.memories, today: S.today, todayActs: S.todayActs, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
-      pos: body.position.toArray(), cat: cat.pos.toArray(), pip: pip.save(), learned: S.learned || []
+      pos: body.position.toArray(), floor: S.floor, cat: cat.pos.toArray(), pip: pip.save(), learned: S.learned || []
     };
   }
   function load(d) {
@@ -101,6 +101,7 @@ export function createSimulation(opts = {}) {
     S.todayActs = d.todayActs || [];
     S.here = { ang: d.here.ang, pts: d.here.pts.map(a => new THREE.Vector3().fromArray(a)) };
     body.position.fromArray(d.pos);
+    S.floor = S.fy = d.floor || 0;
     body.visible = true;
     body.item = null;
     S.anchor = null;

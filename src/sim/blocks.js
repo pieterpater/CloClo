@@ -8,6 +8,7 @@
 import { LOC, NEIGHBOURS } from '../world/locations.js';
 
 export const MAX_H = 12, MAX_BLOCKS = 400, RADIUS = 58;
+export const LEVEL = .94; // the height of one block, in metres
 export const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white'];
 const LETTERS = 'roygbpw';
 

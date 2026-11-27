@@ -21,7 +21,7 @@ Mosdorp: a round village with a square and a fountain in the middle. Around it: 
 
 He has no needs, stats or meters: nothing makes him hungry or tired. What he does is entirely up to you. Let him follow his whims, his plans, his friends, the time of day and what happened earlier, and give his days a shape and a story. Mosdorp is quiet at night and most creatures sleep then, but that is up to him too.
 
-Blocks are solid: he can't walk through them. A spot with a block on one of its two lowest levels is in his way (he can walk under bridges and arches). If blocks wall off a place, he can't get there until blocks are moved or taken away, which he does by building. When he can't even reach the block yard, he builds right where he stands.
+Blocks are solid: he can't walk through them, but he can climb. He steps up one block at a time and can jump down from up to three blocks, so a single block is a step, stairs take him up high, and he can stand and walk on top of what he builds (he needs two free levels above him, so he also fits under bridges and arches). A wall two or more blocks high is in his way unless there are stairs. If blocks wall off a place, he can't get there until blocks are moved or taken away (by building) or he builds stairs over them. When he can't even reach the block yard, he builds right where he stands.
 
 Activities (use the key):
 ${KEYS.map(k => `- ${k}: ${ACTIVITY_INFO[k]}`).join('\n')}
@@ -86,7 +86,8 @@ function situation(st) {
     st.pip ? `Pip ${st.pip.following ? 'is walking along with him' : 'is at home by his doghouse'}. Pip's tricks (0 = not at all, 100 = knows it well): ${TRICKS.map(t => `${t} ${Number(st.pip.tricks?.[t]) || 0}`).join(', ')}.` : '',
     st.pip && st.pip.news ? clean(st.pip.news, 200) : '',
     st.stuck ? `He just tried to go to ${clean(st.stuck.place, 40)} (for ${KEYS.includes(st.stuck.act) ? st.stuck.act : 'something'}), but blocks were in his way and there was no way around them. He is standing as close as he could get.` : '',
-    st.boxed ? 'He is boxed in: blocks all around him, he can\'t walk anywhere. The only thing he can do now is build, to take blocks away and get out.' : '',
+    st.boxed ? 'He is boxed in: blocks all around him, he can\'t walk or climb anywhere. The only thing he can do now is build, to take blocks away (or build stairs) and get out.' : '',
+    Number(st.floor) > 0 ? `He is standing on top of blocks, ${Number(st.floor)} block${Number(st.floor) > 1 ? 's' : ''} up.` : '',
     ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -187,7 +188,8 @@ export async function planBuild(st) {
     st.inPlace
       ? `CloClo couldn't get to the block yard, so he builds right where he stands, with the blocks he carries. You design what he builds, and where; he can reach spots right next to him, and walks to others if the way is free.`
       : `CloClo is at the block yard, with a crate full of blocks, and is about to build. You design what he builds, and where: anywhere in the village. He walks to each spot himself.`,
-    'He can\'t walk through blocks (only under bridges and arches whose two lowest levels are free), so don\'t wall him in, unless he wants to.',
+    'He can\'t walk through blocks, but he can climb: up one block at a time (stairs!), down up to three, and he can stand on top of blocks if there are two free levels above. So he can build stairs, towers to stand on, walkways and bridges to walk over or under. Don\'t wall him in, unless he wants to.',
+    Number(st.floor) > 0 ? `He is standing on top of blocks, ${Number(st.floor)} up.` : '',
     st.stuck ? `Blocks were just in his way to ${clean(st.stuck.place, 40)}.` : '',
     st.boxed && Array.isArray(st.wayOut) && st.wayOut.length
       ? `He is BOXED IN and must get out first. The quickest way out is through these spots, nearest first: ${st.wayOut.slice(0, 12).map(([x, z]) => `(${Number(x)}, ${Number(z)})`).join(', ')}. To make a spot walkable again, every block on its levels 0 and 1 must go: "remove" takes away one block at a time (y = -1 is the top one), so a spot with blocks on several levels needs several "remove" steps; "clear" puts back everything within 2 spots of (x, z). Don't place new blocks in the way.`

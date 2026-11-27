@@ -62,6 +62,7 @@ async function start(renderer) {
     const c = view.clo;
     V.mode = c.mode;
     V.moving = c.moving; // walking to a spot while building
+    V.climbing = c.climbing;
     V.act = c.act;
     V.thought = c.thought;
     V.plan = c.plan;

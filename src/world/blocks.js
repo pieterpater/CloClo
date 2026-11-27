@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, box, bulbMat } from '../helpers.js';
 import { LOC, heightAt } from './locations.js';
+import { LEVEL } from '../sim/blocks.js';
 import { lamps } from './lamps.js';
 import { emit } from '../particles.js';
 
 // Draws the block yard (his workshop with the crate) and all blocks in the village (they come from sim/blocks.js).
 // the yard's sandy plot keeps its old size; blocks themselves stand on the village grid (1 m spots)
-const SIZE = 8, CELL = .9, BLOCK = .94;
+const SIZE = 8, CELL = .9, BLOCK = LEVEL;
 const COLOURS = { r: 0xe63946, o: 0xf4a261, y: 0xffd166, g: 0x52b788, b: 0x4cc9f0, p: 0x9b5de5, w: 0xf8f9fa };
 const geo = new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK);
 let group = null, last = null;

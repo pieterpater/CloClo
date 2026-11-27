@@ -5,7 +5,8 @@ import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
 import { TRICKS, TRICK_NAMES } from './pip.js';
-import { planWalk, cellOf, wayOut } from './walk.js';
+import { planWalk, cellOf, wayOut, floorsAt } from './walk.js';
+import { LEVEL } from './blocks.js';
 import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
@@ -48,6 +49,8 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     here: { ang: LOC.home.ang, pts: [LOC.home.spot.clone()] },
     last: [], face: 0, thought: 'Good morning!', tNext: 0, anchor: null, hop: false, wow: false, prev: null,
     minutes: null, plan: '', mood: 'happy',
+    // the floor he stands on (0 = the ground; higher = on top of blocks), and his height in floors while moving
+    floor: 0, fy: 0, climbing: false,
     // long-term memory: a short summary of each of his last days, and what happened today so far
     memories: [], today: [], todayActs: []
   };
@@ -105,7 +108,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
 
   // Boxed in: blocks all around, so he can't even reach the square.
   const SQUARE = new THREE.Vector3(0, 0, 0);
-  const isBoxedIn = () => !planWalk(clo.position, [SQUARE]).reached;
+  const isBoxedIn = () => !planWalk(clo.position, S.floor, [SQUARE]).reached;
 
   function choose() {
     const h = hour();
@@ -123,7 +126,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       time: dayLabel(world.T), hour: h, plan: S.plan,
       pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories, stuck: S.stuck,
-      boxed: S.boxed,
+      boxed: S.boxed, floor: S.floor,
       // boxed in, the only thing he can do is build: take blocks away
       open: S.boxed ? ['build'] : Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
@@ -161,7 +164,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.tgt = tgt;
     // his usual route, but around any blocks in the way; if the place is walled off, he walks as
     // close as he can and gets stuck there
-    const walk = planWalk(clo.position, route(S.here, tgt));
+    const walk = planWalk(clo.position, S.floor, route(S.here, tgt));
     S.queue = walk.pts;
     S.blockedWay = !walk.reached;
     S.buildHere = false;
@@ -286,7 +289,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     const ask = {
       yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
       blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) },
-      inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null
+      inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null, floor: S.floor
     };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || (S.buildHere ? escapePlan() : rulesPlan()));
@@ -301,15 +304,30 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.tNext = world.T + 1e9; // his own thought stays up while he builds
   }
 
-  // walk in a straight line towards (x, z); true once he is there
-  function walkTowards(x, z, gd) {
-    tmp.set(x - clo.position.x, 0, z - clo.position.z);
-    const d = tmp.length(), step = 2.4 * gd;
-    if (d <= step) { clo.position.x = x; clo.position.z = z; S.moving = false; return true; }
+  // Move up to `step` metres towards walk point p (its y is the floor there), climbing or dropping
+  // smoothly on the way. Returns the distance left over once he gets there, or -1 if not there yet.
+  function moveTowards(p, step) {
+    tmp.set(p.x - clo.position.x, 0, p.z - clo.position.z);
+    const d = tmp.length();
+    S.climbing = Math.abs(p.y - S.fy) > .05;
+    if (d <= step) {
+      clo.position.x = p.x;
+      clo.position.z = p.z;
+      S.fy = S.floor = p.y;
+      return step - d;
+    }
+    S.fy += (p.y - S.fy) * Math.min(1, step / d);
     clo.position.addScaledVector(tmp, step / d);
     S.face = Math.atan2(tmp.x, tmp.z);
-    S.moving = true;
-    return false;
+    return -1;
+  }
+
+  // walk towards walk point p; true once he is there
+  function walkTowards(p, gd) {
+    const left = moveTowards(p, 2.4 * gd);
+    S.moving = left < 0;
+    if (!S.moving) S.climbing = false;
+    return !S.moving;
   }
 
   function stepBuild(gd) {
@@ -317,7 +335,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     if (!b || !b.steps) return;
     // walking to the next spot (around blocks): he stands just beside it, on the side he comes from
     if (b.path) {
-      if (b.path.length) { if (walkTowards(b.path[0].x, b.path[0].z, gd)) b.path.shift(); return; }
+      if (b.path.length) { if (walkTowards(b.path[0], gd)) b.path.shift(); return; }
       b.path = null;
       b.t = STEP_MINUTES;
     }
@@ -332,14 +350,16 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
         if (b.tried === st) { b.steps.shift(); b.tried = null; continue; } // couldn't get there: skip it
         const k = d > .01 ? 1.1 / d : 0;
         const stand = new THREE.Vector3(st.x - dx * k + (d > .01 ? 0 : 1.1), 0, st.z - dz * k);
-        b.path = planWalk(clo.position, [stand]).pts;
+        b.path = planWalk(clo.position, S.floor, [stand]).pts;
         b.tried = st;
         return;
       }
       b.tried = null;
       // never build on the spot he is standing on
+      // never put a block where he is standing (it would bury him)
       const [cx, cz] = cellOf(clo.position);
-      if (placing && cx === st.x && cz === st.z) { b.steps.shift(); continue; }
+      const level = st.y >= 0 ? st.y : (yard.cols.get(`${st.x},${st.z}`) || []).length;
+      if (placing && cx === st.x && cz === st.z && level >= S.floor && level <= S.floor + 1) { b.steps.shift(); continue; }
       b.steps.shift();
       const v = applyStep(st, b.carry);
       if (v < 0) continue; // a full, empty or forbidden spot: skip it
@@ -387,7 +407,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     clo.item = null;
     clo.visible = true;
     S.anchor = null;
-    if (S.act === 'swing') clo.position.copy(LOC.park.spot);
+    if (S.act === 'swing') { clo.position.copy(LOC.park.spot); S.floor = S.fy = 0; }
     S.mode = 'choosing';
   }
 
@@ -400,14 +420,12 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     else if (S.mode === 'walking') {
       let step = 2.4 * gd;
       while (step > 0 && S.queue.length) {
-        const p = S.queue[0];
-        tmp.subVectors(p, clo.position);
-        tmp.y = 0;
-        const d = tmp.length();
-        if (d <= step) { clo.position.copy(p); S.queue.shift(); step -= d; }
-        else { clo.position.addScaledVector(tmp, step / d); S.face = Math.atan2(tmp.x, tmp.z); step = 0; }
+        const left = moveTowards(S.queue[0], step);
+        if (left < 0) break;
+        S.queue.shift();
+        step = left;
       }
-      if (!S.queue.length) { if (S.blockedWay) enterStuck(); else arrive(); }
+      if (!S.queue.length) { S.climbing = false; if (S.blockedWay) enterStuck(); else arrive(); }
     } else if (S.mode === 'stuck') {
       S.left -= gd;
       if (S.left <= 0) { S.prev = null; S.mode = 'choosing'; }
@@ -433,7 +451,18 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       }
       if (S.left <= 0) finish();
     }
-    if (!(S.mode === 'doing' && S.act === 'swing')) clo.position.y = heightAt(clo.position.x, clo.position.z);
+    if (!(S.mode === 'doing' && S.act === 'swing')) {
+      // standing still: if what he stands on is gone, he drops down (or climbs out of a buried spot)
+      if (S.mode !== 'walking' && !S.moving) {
+        const [cx, cz] = cellOf(clo.position), fl = floorsAt(cx, cz);
+        if (!fl.includes(S.floor)) {
+          const below = fl.filter(f => f <= S.floor);
+          S.floor = below.length ? below[below.length - 1] : fl[0];
+        }
+        S.fy += (S.floor - S.fy) * Math.min(1, gd * 4);
+      }
+      clo.position.y = heightAt(clo.position.x, clo.position.z) + S.fy * LEVEL;
+    }
   }
 
   return { S, memory, update, closeDay, isSwinging: () => S.mode === 'doing' && S.act === 'swing' };
