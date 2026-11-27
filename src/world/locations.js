@@ -17,8 +17,21 @@ export const LOC = {
   icecream: { name: 'Ice cream stand', x: 21, z: 1, off: 2.4, labelH: 5.6, clear: 5 },
   hill: { name: 'Lookout hill', x: -26, z: 1, off: 0, labelH: 6.4, clear: 9, roadStop: 6.6 },
   meadow: { name: 'Flower meadow', x: -9, z: 23, off: 2.6, labelH: 2.6, clear: 5.5 },
-  blocks: { name: 'Block yard', x: -13, z: -21, off: 4.9, labelH: 9.8, clear: 8 }
+  blocks: { name: 'Block yard', x: -13, z: -21, off: 4.9, labelH: 9.8, clear: 8 },
+  farm: { name: 'Little farm', x: 16, z: 29, off: 5.4, labelH: 5.8, clear: 9 },
+  field: { name: 'Training field', x: 32, z: -9, off: 4.2, labelH: 2.8, clear: 7.5 }
 };
+
+// How far the village reaches (the grass ends here, then fields and mountains).
+export const WORLD_R = 62;
+
+// The neighbours' houses: just houses, to make Mosdorp feel like a village. They face the square.
+export const NEIGHBOURS = [
+  { x: -34, z: -12, b: { w: 4.2, d: 3.8, h: 3, wall: 0xe9edc9, roof: 0x6d597a } },
+  { x: -12, z: -34, b: { w: 4.6, d: 4, h: 3.2, wall: 0xfefae0, roof: 0x2a9d8f } },
+  { x: 28, z: -28, b: { w: 4, d: 3.6, h: 2.9, wall: 0xffe5d9, roof: 0x9c6644 } },
+  { x: 36, z: 16, b: { w: 4.4, d: 4, h: 3.1, wall: 0xdde5b6, roof: 0xbc4749 } }
+].map(n => ({ ...n, rot: Math.atan2(-n.x, -n.z), clear: 5.5 }));
 
 // The lookout hill: a smooth bump CloClo can walk up.
 export const HILL = { r: 7, h: 2.6 };
@@ -44,3 +57,11 @@ for (const k in LOC) {
 }
 
 LOC.square = { name: 'Square', x: 0, z: 0 };
+
+// Pip's doghouse, beside CloClo's house (in the house's own directions: x to the side, z to the front).
+export function homeLocal(lx, lz) {
+  const H = LOC.home, c = Math.cos(H.rot), s = Math.sin(H.rot);
+  return { x: H.x + lx * c + lz * s, z: H.z - lx * s + lz * c };
+}
+export const DOGHOUSE = { ...homeLocal(4.3, 1.4), door: homeLocal(4.3, 2.6), rot: 0 };
+DOGHOUSE.rot = LOC.home.rot;

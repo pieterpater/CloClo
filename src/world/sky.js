@@ -15,7 +15,7 @@ export function buildSky() {
       const p = mesh(new THREE.IcosahedronGeometry(1.4 + rnd()), m, j * 1.6 - 2.4, rnd() * .6, rnd() - .5, c);
       p.castShadow = false;
     }
-    c.position.set(rnd() * 80 - 40, 20 + rnd() * 6, rnd() * 80 - 40);
+    c.position.set(rnd() * 110 - 55, 22 + rnd() * 6, rnd() * 110 - 55);
     scene.add(c);
     clouds.push(c);
   }
@@ -32,7 +32,7 @@ export function buildSky() {
 export function updateSky(rd) {
   clouds.forEach((c, i) => {
     c.position.x += rd * (.4 + i * .05);
-    if (c.position.x > 55) c.position.x = -55;
+    if (c.position.x > 75) c.position.x = -75;
     const o = Math.min(1, Math.max(0, (camera.position.distanceTo(c.position) - 10) / 12));
     c.userData.mat.opacity = o;
     c.visible = o > .02;

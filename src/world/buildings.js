@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, box, winMat } from '../helpers.js';
-import { LOC } from './locations.js';
+import { LOC, NEIGHBOURS } from './locations.js';
 
 function building(L) {
   const o = L.b, g = new THREE.Group();
@@ -58,5 +58,25 @@ export function buildBuildings() {
     mesh(box(2, .08, .06), mat(0xffffff), s * 2.35, .5, h.d / 2 + 2.2, house);
     mesh(box(1, .22, .25), mat(0x8a5a3b), s * (h.w / 2 - 1.05), h.h * .6 - .55, h.d / 2 + .2, house);
     for (const x of [-.3, 0, .3]) mesh(new THREE.IcosahedronGeometry(.13), mat(x ? 0xff8fab : 0xffd166), s * (h.w / 2 - 1.05) + x, h.h * .6 - .38, h.d / 2 + .22, house);
+  }
+
+  // Pip's doghouse beside CloClo's house
+  const dh = new THREE.Group();
+  dh.position.set(4.3, 0, 1.4);
+  house.add(dh);
+  mesh(box(1.4, 1, 1.4), mat(0xd4a373), 0, .5, 0, dh);
+  const dr = mesh(new THREE.ConeGeometry(1.15, .8, 4), mat(0x7f5539), 0, 1.4, 0, dh);
+  dr.rotation.y = Math.PI / 4;
+  mesh(new THREE.CylinderGeometry(.32, .32, .05, 12, 1, false, 0, Math.PI), mat(0x3a2a1a), 0, .32, .71, dh).rotation.x = Math.PI / 2;
+  mesh(box(.55, .5, .06), mat(0x3a2a1a), 0, .22, .71, dh);
+  mesh(new THREE.CylinderGeometry(.22, .18, .1, 12), mat(0xe63946), .8, .05, .5, dh); // food bowl
+  mesh(box(.5, .14, .06), mat(0xffffff), 0, 1.02, .72, dh);                         // name board
+
+  // the neighbours' houses, each with a chimney and a little fence
+  for (const n of NEIGHBOURS) {
+    const g = building(n);
+    mesh(box(.5, 1.3, .5), mat(0xb5838d), -.9, n.b.h + 1.4, -.4, g);
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) mesh(box(.1, .6, .07), mat(0xffffff), s * (1.2 + i * .3), .3, n.b.d / 2 + 1.6, g);
+    for (const s of [-1, 1]) mesh(box(1.6, .07, .05), mat(0xffffff), s * 1.8, .45, n.b.d / 2 + 1.6, g);
   }
 }

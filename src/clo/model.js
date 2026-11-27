@@ -131,7 +131,18 @@ export function buildCloClo() {
   bag.rotation.x = .7 + Math.PI;
   const block = item('block');
   mesh(box(.3, .3, .3), mat(0xe63946), .1, -.42, .22, block);
-  const items = { rod, can, icecream: cone, letter, net, block };
+  const bread = item('bread');
+  mesh(new THREE.SphereGeometry(.16, 10, 8), mat(0xd4a373), .1, -.4, .22, bread).scale.set(1.4, .8, .9);
+  const grain = item('grain');
+  mesh(new THREE.CylinderGeometry(.13, .16, .3, 8), mat(0xe9d8a6), .1, -.42, .22, grain);
+  mesh(new THREE.SphereGeometry(.09, 8, 6), mat(0xe9c46a), .1, -.25, .22, grain);
+  const carrot = item('carrot');
+  mesh(new THREE.ConeGeometry(.06, .34, 8), mat(0xf77f00), .1, -.42, .3, carrot).rotation.x = Math.PI / 2 + .3;
+  mesh(new THREE.ConeGeometry(.05, .14, 5), mat(0x52b788), .1, -.46, .1, carrot).rotation.x = -Math.PI / 2;
+  const treat = item('treat');
+  mesh(new THREE.CylinderGeometry(.03, .03, .2, 6), mat(0xfefae0), .1, -.42, .24, treat).rotation.z = Math.PI / 2;
+  for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(.045, 6, 4), mat(0xfefae0), .1 + s * .1, -.42, .24, treat);
+  const items = { rod, can, icecream: cone, letter, net, block, bread, grain, carrot, treat };
 
   // a lantern in his left hand for walks after dark
   const lantern = new THREE.Group();

@@ -106,6 +106,30 @@ export function animateCloClo(model, S, anim, rd, moodName, isNight) {
     arms[0].rotation.x = -.2 - reach * .5;
     body.rotation.x = reach * .2;
     lookGoal.set(0, -.03);
+  } else if (s === 'feed_ducks' || s === 'feed_chickens') {
+    // tossing crumbs or grain
+    const toss = Math.max(0, Math.sin(anim * 3));
+    arms[1].rotation.x = -.5 - toss * 1.4;
+    body.rotation.x = .1 + toss * .08;
+    lookGoal.set(0, -.04);
+  } else if (s === 'pet_sheep' || s === 'feed_rabbits') {
+    body.rotation.x = .25;
+    arms[1].rotation.x = -1.2 + Math.sin(anim * 3) * .25;
+    arms[0].rotation.x = s === 'pet_sheep' ? -1 + Math.sin(anim * 3 + 1) * .2 : 0;
+    eyeSquint = s === 'pet_sheep' ? .5 : 1;
+    lookGoal.set(0, -.05);
+  } else if (s === 'train_pip') {
+    // holding out a treat, cheering now and then
+    const cheer = Math.sin(anim * 1.3) > .6;
+    arms[1].rotation.x = -1.1;
+    arms[0].rotation.z = cheer ? -2.3 : 0;
+    body.position.y = cheer ? Math.abs(Math.sin(anim * 6)) * .12 : 0;
+    mouthOpen = cheer;
+    lookGoal.set(0, -.05);
+  } else if (s === 'walk_pip') {
+    arms[1].rotation.z = 2.4 + Math.sin(anim * 8) * .3;
+    body.position.y = Math.abs(Math.sin(anim * 5)) * .12;
+    mouthOpen = true;
   } else if (s === 'cat') {
     body.scale.y *= .92;
     body.rotation.x = .2;

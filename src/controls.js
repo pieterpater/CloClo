@@ -35,7 +35,7 @@ export function setupControls(stage) {
     p.y = e.clientY;
     if (ptrs.size === 2) {
       const [a, b] = [...ptrs.values()];
-      cam.dist = clamp(dist0 * pinch0 / Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), 9, 80);
+      cam.dist = clamp(dist0 * pinch0 / Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), 9, 105);
     }
   });
   const up = e => ptrs.delete(e.pointerId);
@@ -44,13 +44,13 @@ export function setupControls(stage) {
   stage.addEventListener('wheel', e => {
     e.preventDefault();
     hideHint();
-    cam.dist = clamp(cam.dist * (1 + Math.sign(e.deltaY) * .1), 9, 80);
+    cam.dist = clamp(cam.dist * (1 + Math.sign(e.deltaY) * .1), 9, 105);
   }, { passive: false });
 
   const camBtn = document.getElementById('cam');
   camBtn.addEventListener('click', () => {
     cam.follow = !cam.follow;
-    cam.dist = cam.follow ? (mobile ? 26 : 22) : 62;
+    cam.dist = cam.follow ? (mobile ? 26 : 22) : 82;
     cam.phi = cam.follow ? .72 : .95;
     camBtn.textContent = cam.follow ? 'Overview' : 'Follow CloClo';
   });

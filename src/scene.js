@@ -4,7 +4,7 @@ export const mobile = matchMedia('(max-width:760px)').matches;
 
 export const scene = new THREE.Scene();
 export const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
-scene.fog = new THREE.Fog(0x86bfe3, 60, 140);
+scene.fog = new THREE.Fog(0x86bfe3, 80, 175);
 
 export const hemi = new THREE.HemisphereLight(0xffffff, 0x6a8f5a, 0.6);
 export const sun = new THREE.DirectionalLight(0xffffff, 1);

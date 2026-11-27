@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { world, hour } from '../state.js';
 import { createBrain } from './brain.js';
 import { createCat } from './cat.js';
+import { createPip } from './pip.js';
 import { garden, growGarden } from './garden.js';
 import { yard, yardToString, yardFromString } from './blocks.js';
 
@@ -24,7 +25,8 @@ export function createSimulation(opts = {}) {
   };
   const body = { position: new THREE.Vector3(), visible: true, item: null };
   const cat = createCat();
-  const brain = createBrain(body, cat, write, opts);
+  const pip = createPip();
+  const brain = createBrain(body, cat, pip, write, opts);
   let hopN = 0, wowN = 0;
 
   // gd: game minutes to advance
@@ -36,6 +38,7 @@ export function createSimulation(opts = {}) {
     world.T += gd;
     brain.update(gd);
     cat.update(gd, isNightAt(hour()));
+    pip.update(gd, body.position, body.visible, isNightAt(hour()));
     growGarden(gd);
     // one-off moments become counters, so viewers can't miss them between two updates
     if (brain.S.hop) { hopN++; brain.S.hop = false; }
@@ -60,6 +63,10 @@ export function createSimulation(opts = {}) {
         x: r2(cat.pos.x), z: r2(cat.pos.z), face: r2(cat.face),
         walking: cat.walking, sleeping: cat.sleeping, meeting: !!cat.meetAt
       },
+      pip: {
+        x: r2(pip.pos.x), z: r2(pip.pos.z), face: r2(pip.face), mode: pip.mode, doing: pip.doing,
+        walking: pip.walking, sleeping: pip.sleeping, tries: pip.tries
+      },
       growth: r2(garden.growth),
       yard: yardToString(), idea: yard.idea
     };
@@ -73,7 +80,7 @@ export function createSimulation(opts = {}) {
       version: 1, T: world.T, mood: S.mood, yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
       last: S.last, prev: S.act, plan: S.plan,
       memories: S.memories, today: S.today, todayActs: S.todayActs, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
-      pos: body.position.toArray(), cat: cat.pos.toArray()
+      pos: body.position.toArray(), cat: cat.pos.toArray(), pip: pip.save(), learned: S.learned || []
     };
   }
   function load(d) {
@@ -99,7 +106,9 @@ export function createSimulation(opts = {}) {
     S.anchor = null;
     S.mode = 'choosing';
     cat.pos.fromArray(d.cat);
+    pip.load(d.pip);
+    S.learned = d.learned || [];
   }
 
-  return { tick, snapshot, diary, write, save, load, brain };
+  return { tick, snapshot, diary, write, save, load, brain, pip };
 }

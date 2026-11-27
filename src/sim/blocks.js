@@ -5,9 +5,9 @@
 //   y is the level: 0 = on the ground (on the hill, the ground follows the slope)
 // A block can go on top of a stack, or at a chosen level if it rests on a block below it or touches
 // a block beside it at the same level (so bridges, arches and windows are possible).
-import { LOC } from '../world/locations.js';
+import { LOC, NEIGHBOURS } from '../world/locations.js';
 
-export const MAX_H = 12, MAX_BLOCKS = 400, RADIUS = 44;
+export const MAX_H = 12, MAX_BLOCKS = 400, RADIUS = 58;
 export const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white'];
 const LETTERS = 'roygbpw';
 
@@ -30,6 +30,9 @@ export function blocked(x, z) {
     const L = LOC[k];
     if (Math.hypot(x - L.x, z - L.z) < Math.max(L.b.w, L.b.d) / 2 + .8) return true;
   }
+  for (const n of NEIGHBOURS) if (Math.hypot(x - n.x, z - n.z) < Math.max(n.b.w, n.b.d) / 2 + .8) return true;
+  if (Math.hypot(x - LOC.farm.x, z - LOC.farm.z) < 7.6) return true; // the farm: pen, barn and hutch
+  if (Math.hypot(x - LOC.field.x, z - LOC.field.z) < 5) return true;  // the training field
   const near = (L, r, off = 0) => Math.hypot(x - (L.x - L.dir.x * off), z - (L.z - L.dir.z * off)) < r;
   return near(LOC.pond, 4.9) || near(LOC.icecream, 2.4) || near(LOC.garden, 3.2, 1.6);
 }

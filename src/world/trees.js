@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, rnd, clamp } from '../helpers.js';
-import { LOC } from './locations.js';
+import { LOC, NEIGHBOURS, WORLD_R } from './locations.js';
 
 function tree(x, z, s) {
   const t = new THREE.Group();
@@ -21,14 +21,15 @@ const segD = (px, pz, L) => {
 export function buildTrees() {
   // scattered at random, but not on roads or buildings
   let placed = 0;
-  for (let i = 0; i < 260 && placed < 55; i++) {
-    const a = rnd() * Math.PI * 2, r = 10 + rnd() * 34, x = Math.cos(a) * r, z = Math.sin(a) * r;
+  for (let i = 0; i < 500 && placed < 95; i++) {
+    const a = rnd() * Math.PI * 2, r = 10 + rnd() * (WORLD_R - 14), x = Math.cos(a) * r, z = Math.sin(a) * r;
     let ok = true;
     for (const k in LOC) {
       const L = LOC[k];
       if (!L.dir) continue;
       if (segD(x, z, L) < 3 || Math.hypot(x - L.x, z - L.z) < L.clear) ok = false;
     }
+    for (const n of NEIGHBOURS) if (Math.hypot(x - n.x, z - n.z) < n.clear + 1) ok = false;
     if (ok) { tree(x, z, .8 + rnd() * .6); placed++; }
   }
   // three fixed trees in the park

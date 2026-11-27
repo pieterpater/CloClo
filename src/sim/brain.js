@@ -4,6 +4,7 @@ import { pick } from './util.js';
 import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
+import { TRICKS, TRICK_NAMES } from './pip.js';
 import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
@@ -29,7 +30,7 @@ const GRANDMA = [
 //   decide resolves to { activity, thought, diary, minutes, mood, plan }, or null to let the rules decide.
 // opts.planBuild(state): asks the language model what to build at the block yard → { idea, thought, steps } or null.
 // opts.summarize(state): asks the language model for a summary of his day → { summary } or null.
-export function createBrain(body, cat, writeDiary, opts = {}) {
+export function createBrain(body, cat, pip, writeDiary, opts = {}) {
   const clo = body;
   // the latest diary lines, newest first, to give the language model some memory
   const memory = [];
@@ -108,6 +109,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.thought = pickNew(DECIDING);
     Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h, plan: S.plan,
+      pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories,
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
@@ -145,6 +147,9 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.queue = route(S.here, tgt);
     S.here = { ang: tgt.ang, pts: tgt.pts };
     if (tgt.cat) cat.meet(tgt.cat, tgt.pts[0]);
+    // which trick to practise with Pip: the model's choice, or the first one he doesn't know well yet
+    S.trick = best === 'train_pip' ? (llm && TRICKS.includes(llm.trick) ? llm.trick : TRICKS.find(t => pip.tricks[t] < 100) || 'fetch') : null;
+    S.pipNews = null;
     S.thought = thought || pick(a.why);
     write(S.thought);
     S.mode = 'walking';
@@ -168,6 +173,9 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     const h = hour();
     if (S.act === 'sleep' && (h >= 19.5 || h < 6.5)) closeDay();
     if (S.act === 'build') startBuild();
+    if (S.act === 'sleep' && (h >= 19.5 || h < 6.5)) pip.bedtime();
+    if (S.act === 'walk_pip') pip.walkies(180);
+    if (S.act === 'train_pip') pip.startTraining(clo.position, S.face, S.trick);
   }
 
   // ---- long-term memory ----
@@ -291,6 +299,18 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     S.build = null;
     S.moving = false;
     if (S.act === 'cat') cat.release();
+    if (S.act === 'train_pip') {
+      const r = pip.endTraining();
+      if (r && r.tries) {
+        const name = TRICK_NAMES[r.trick];
+        write(`Pip and I practised “${name}”: ${r.oks} of ${r.tries} tries went well.`);
+        if (r.after >= 100 && !S.learned?.includes(r.trick)) {
+          S.learned = [...(S.learned || []), r.trick];
+          write(`Pip can ${name} now! Best puppy ever.`);
+        }
+        S.pipNews = `In the last training Pip practised "${name}": ${r.oks} of ${r.tries} tries went well (now ${Math.round(r.after)}/100).`;
+      }
+    }
     clo.item = null;
     clo.visible = true;
     S.anchor = null;

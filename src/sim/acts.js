@@ -137,5 +137,53 @@ export const ACTS = {
     why: ['To the block yard! I have an idea.', 'I want to build something with the blocks.'],
     mid: ['One more on top…', 'Careful, careful…', 'This one goes here!'],
     end: ['I built something! I’ll show Biscuit.', 'My building is finished. For now.']
+  },
+  feed_ducks: {
+    did: 'fed the ducks', loc: 'pond', txt: 'is feeding the ducks', item: 'bread', fx: ['heart', 3],
+    score: h => day(h) ? 40 : AWKWARD, mood: 'happy',
+    dur: () => 15 + Math.random() * 10,
+    why: ['I saved some bread for the ducks.', 'Duck snack time!'],
+    mid: ['Here you go, ducks!', 'One for you, one for you…', 'No pushing, there’s enough!'],
+    end: ['The ducks ate every crumb.', 'The yellow duck nibbled my finger. It tickled.']
+  },
+  feed_chickens: {
+    did: 'fed the chickens', loc: 'farm', txt: 'is feeding the chickens', item: 'grain', fx: ['note', 3],
+    score: h => h >= 7 && h < 10 ? 55 : day(h) ? 25 : AWKWARD, mood: 'happy',
+    dur: () => 15 + Math.random() * 10,
+    why: ['The chickens will be hungry.', 'Breakfast for the chickens!'],
+    mid: ['Chick chick chick!', 'Peck peck peck.', 'Dot is the fastest pecker.'],
+    end: ['The chickens clucked a thank-you song.', 'I found an egg! I left it for the farmer.']
+  },
+  pet_sheep: {
+    did: 'cuddled Wooly the sheep', loc: 'farm', txt: 'is petting Wooly the sheep', fx: ['heart', 1],
+    score: h => day(h) ? 40 : AWKWARD, mood: 'delighted',
+    dur: () => 12 + Math.random() * 12,
+    why: ['I want to hug Wooly.', 'Wooly is the softest thing in Mosdorp.'],
+    mid: ['So fluffy!', 'Baaa! (That means hello.)', 'Wooly leans on me. Heavy!'],
+    end: ['My hands smell like sheep now. Nice.', 'Wooly followed me along the fence.']
+  },
+  feed_rabbits: {
+    did: 'gave carrots to the rabbits', loc: 'farm', txt: 'is feeding the rabbits', item: 'carrot', fx: ['heart', 2.5],
+    score: h => day(h) ? 38 : AWKWARD, mood: 'happy',
+    dur: () => 12 + Math.random() * 10,
+    why: ['Bun and Bean would like a carrot.', 'Carrot delivery for the rabbits!'],
+    mid: ['Nibble nibble.', 'Bun’s nose never stops wiggling.', 'Bean wants seconds.'],
+    end: ['Bun and Bean ate the whole carrot.', 'Bean did a happy hop!']
+  },
+  train_pip: {
+    did: 'trained Pip', loc: 'field', txt: 'is training Pip', item: 'treat', fx: ['star', 3],
+    score: h => day(h) ? 36 : AWKWARD, mood: 'delighted',
+    dur: () => 30 + Math.random() * 20,
+    why: ['Pip, let’s practise!', 'Training time with Pip!'],
+    mid: ['Good boy, Pip!', 'Almost! Try again.', 'Treat for a clever puppy!'],
+    end: ['Pip is getting so clever.', 'Pip was tired, so we stopped.']
+  },
+  walk_pip: {
+    did: 'took Pip for a walk', loc: 'home', txt: 'is getting Pip for a walk', fx: ['heart', 2],
+    score: h => day(h) ? 35 : AWKWARD, mood: 'delighted',
+    dur: () => 8,
+    why: ['Walkies, Pip!', 'Pip wants to come along today.'],
+    mid: ['Come on, Pip!', 'Pip’s tail is going crazy.'],
+    end: ['Pip is coming with me!', 'Off we go, Pip and me.']
   }
 };

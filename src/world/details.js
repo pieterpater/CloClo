@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
 import { mesh, mat, box, rnd } from '../helpers.js';
-import { LOC, heightAt } from './locations.js';
+import { LOC, NEIGHBOURS, WORLD_R, heightAt } from './locations.js';
 
 // Small things that make Mosdorp feel lived-in: grass, flowers, bushes, land and mountains on the
 // horizon, benches on the square, lily pads and reeds, chimney smoke, birds and fireflies.
@@ -20,6 +20,7 @@ function onGrass(x, z, roadMargin = 1.8, extra = 0) {
     if (roadDist(x, z, L) < roadMargin) return false;
     if (Math.hypot(x - L.x, z - L.z) < L.clear - 1 + extra) return false;
   }
+  for (const n of NEIGHBOURS) if (Math.hypot(x - n.x, z - n.z) < n.clear - 1 + extra) return false;
   return true;
 }
 
@@ -28,15 +29,15 @@ let chimney = null, smokeT = 0;
 
 export function buildDetails() {
   // ---- land beyond the village, and mountains on the horizon ----
-  const land = mesh(new THREE.RingGeometry(47.5, 95, 64, 1), mat(0x649f53), 0, -.01, 0);
+  const land = mesh(new THREE.RingGeometry(WORLD_R - .5, 120, 72, 1), mat(0x649f53), 0, -.01, 0);
   land.rotation.x = -Math.PI / 2;
   land.castShadow = false;
   for (let i = 0; i < 22; i++) {
-    const a = i / 22 * Math.PI * 2 + rnd() * .2, r = 62 + rnd() * 14, h = 7 + rnd() * 12, w = 8 + rnd() * 8;
+    const a = i / 22 * Math.PI * 2 + rnd() * .2, r = 80 + rnd() * 16, h = 9 + rnd() * 14, w = 10 + rnd() * 9;
     const m = mesh(new THREE.ConeGeometry(w, h, 5 + Math.floor(rnd() * 3)), mat(rnd() < .5 ? 0x6e9a86 : 0x7c9f8c), Math.cos(a) * r, h / 2 - .2, Math.sin(a) * r);
     m.rotation.y = rnd() * Math.PI;
     m.castShadow = m.receiveShadow = false;
-    if (h > 13) {
+    if (h > 16) {
       // a snowy top: the same shape, smaller, sitting on the peak
       const cap = mesh(new THREE.ConeGeometry(w * .3, h * .3, m.geometry.parameters.radialSegments), mat(0xf4f7f5), Math.cos(a) * r, h - h * .15 - .2, Math.sin(a) * r);
       cap.rotation.y = m.rotation.y;
@@ -47,15 +48,15 @@ export function buildDetails() {
   // ---- grass tufts and wildflowers (instanced: hundreds for the price of one) ----
   const tuftGeo = new THREE.ConeGeometry(.11, .28, 4);
   tuftGeo.translate(0, .12, 0);
-  const tufts = new THREE.InstancedMesh(tuftGeo, new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), 900);
+  const tufts = new THREE.InstancedMesh(tuftGeo, new THREE.MeshStandardMaterial({ roughness: .9, flatShading: true }), 1500);
   const flowerGeo = new THREE.IcosahedronGeometry(.09);
   flowerGeo.translate(0, .28, 0);
-  const flowers = new THREE.InstancedMesh(flowerGeo, new THREE.MeshStandardMaterial({ roughness: .7, flatShading: true }), 420);
+  const flowers = new THREE.InstancedMesh(flowerGeo, new THREE.MeshStandardMaterial({ roughness: .7, flatShading: true }), 650);
   const o = new THREE.Object3D(), c = new THREE.Color();
   const greens = [0x78b864, 0x84c26e, 0x6aa957, 0x8fca78], petals = [0xffffff, 0xffd166, 0xff8fab, 0xc77dff, 0x8ecae6];
   let nt = 0, nf = 0;
-  for (let tries = 0; tries < 6000 && (nt < tufts.count || nf < flowers.count); tries++) {
-    const a = rnd() * Math.PI * 2, r = 8 + rnd() * 39, x = Math.cos(a) * r, z = Math.sin(a) * r;
+  for (let tries = 0; tries < 10000 && (nt < tufts.count || nf < flowers.count); tries++) {
+    const a = rnd() * Math.PI * 2, r = 8 + rnd() * (WORLD_R - 9), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (!onGrass(x, z)) continue;
     const y = heightAt(x, z);
     if (nt < tufts.count) {

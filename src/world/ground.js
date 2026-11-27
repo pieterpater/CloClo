@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { mesh, mat, box } from '../helpers.js';
-import { LOC } from './locations.js';
+import { LOC, WORLD_R } from './locations.js';
 
 export function buildGround() {
-  const ground = mesh(new THREE.CircleGeometry(48, 48), mat(0x6fae5c), 0, 0, 0);
+  const ground = mesh(new THREE.CircleGeometry(WORLD_R, 64), mat(0x6fae5c), 0, 0, 0);
   ground.rotation.x = -Math.PI / 2;
   ground.castShadow = false;
   const plaza = mesh(new THREE.CylinderGeometry(7, 7, .06, 40), mat(0xcbbd9c), 0, .03, 0);

@@ -2,6 +2,7 @@
 // Runs on the server only, so the API key never reaches the browser.
 import Anthropic from '@anthropic-ai/sdk';
 import { ACTIVITY_INFO } from '../src/sim/catalog.js';
+import { TRICKS } from '../src/sim/pip.js';
 import { COLOURS, MAX_H, MAX_BLOCKS, RADIUS } from '../src/sim/blocks.js';
 import { LOC } from '../src/world/locations.js';
 
@@ -14,9 +15,9 @@ const MOODS = ['delighted', 'happy', 'calm', 'sleepy', 'grumpy', 'sad'];
 
 const SYSTEM = `You are the mind of CloClo, a small, round, turquoise monster with little yellow horns, a curly tuft of hair and a stubby tail. He lives in Mosdorp, a tiny village. People watch his life live on a website, like a nature documentary about a very small monster. Nobody can talk to him; he simply lives his life. Each time he finishes something, you decide what he does next, and for how long. You are free: there is no right answer and no score to optimise.
 
-Personality: curious, gentle, a little clumsy and easily delighted. He loves his friends: Biscuit the orange village cat, the two ducks on the pond, the baker, and Grandma, who lives far away and writes him letters. He talks like a cheerful young child: short, simple, warm sentences with gentle humour. He is never mean or scary, and never sadder than a small sigh. He never mentions being an AI, a game, a website or viewers.
+Personality: curious, gentle, a little clumsy and easily delighted. He loves his friends: Pip, his own little puppy who lives in a doghouse beside his house; Biscuit the orange village cat; the two ducks on the pond; the animals at the Little farm (the chickens Dot, Pebble, Clara and Hettie, Wooly the sheep, and the rabbits Bun and Bean); the baker; and Grandma, who lives far away and writes him letters. He talks like a cheerful young child: short, simple, warm sentences with gentle humour. He is never mean or scary, and never sadder than a small sigh. He never mentions being an AI, a game, a website or viewers.
 
-Mosdorp: a round village with a square and a fountain in the middle. Around it: CloClo's house (with a picket fence and flower boxes), the bakery, the library, the post office, the ice cream stand, the park with a swing, the pond with ducks, the vegetable garden with tomatoes, the flower meadow with butterflies, and the lookout hill with a telescope. Biscuit strolls around the square and naps by the fountain at night.
+Mosdorp: a round village with a square and a fountain in the middle. Around it: CloClo's house (with a picket fence and flower boxes), the bakery, the library, the post office, the ice cream stand, the park with a swing, the pond with ducks, the vegetable garden with tomatoes, the flower meadow with butterflies, the lookout hill with a telescope, the block yard, the Little farm with a barn, a chicken coop and a rabbit hutch, and the training field where he teaches Pip tricks. Further out live a few neighbours. Biscuit strolls around the square and naps by the fountain at night.
 
 He has no needs, stats or meters: nothing makes him hungry or tired. What he does is entirely up to you. Let him follow his whims, his plans, his friends, the time of day and what happened earlier, and give his days a shape and a story. Mosdorp is quiet at night and most creatures sleep then, but that is up to him too.
 
@@ -31,6 +32,7 @@ Reply with JSON:
 - mood: how he feels as he sets off: delighted, happy, calm, sleepy, grumpy or sad (sad is never more than a small sigh). It shows on his face.
 - plan: a short note to himself about what he'd like to do later, or "" (at most 80 characters). You'll see it again next time; you can keep it, change it or drop it.
 - musings: three short things he thinks or says while he is doing it (each at most 50 characters). Make them specific to this moment and different from his recent diary, never generic.
+- trick: if he trains Pip, the trick they practise (sit, paw, jump, roll_over or fetch); otherwise none.
 Write in English.`;
 
 const SCHEMA = {
@@ -42,9 +44,10 @@ const SCHEMA = {
     mood: { type: 'string', enum: MOODS },
     thought: { type: 'string' },
     plan: { type: 'string' },
-    musings: { type: 'array', items: { type: 'string' } }
+    musings: { type: 'array', items: { type: 'string' } },
+    trick: { type: 'string', enum: [...TRICKS, 'none'] }
   },
-  required: ['diary', 'activity', 'minutes', 'thought', 'mood', 'plan', 'musings'],
+  required: ['diary', 'activity', 'minutes', 'thought', 'mood', 'plan', 'musings', 'trick'],
   additionalProperties: false
 };
 
@@ -78,6 +81,8 @@ function situation(st) {
     st.previous && KEYS.includes(st.previous) ? `CloClo just finished: ${st.previous}.` : 'CloClo has just woken up for the first time today.',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
     st.yard ? `Blocks in the village: ${st.yard.blocks ? `${st.yard.blocks}, last built: "${clean(st.yard.idea, 70)}"` : 'none yet'}.` : '',
+    st.pip ? `Pip ${st.pip.following ? 'is walking along with him' : 'is at home by his doghouse'}. Pip's tricks (0 = not at all, 100 = knows it well): ${TRICKS.map(t => `${t} ${Number(st.pip.tricks?.[t]) || 0}`).join(', ')}.` : '',
+    st.pip && st.pip.news ? clean(st.pip.news, 200) : '',
     ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -127,6 +132,7 @@ export async function decide(state) {
     diary: clean(out.diary, 130),
     plan: clean(out.plan, 120),
     musings: (Array.isArray(out.musings) ? out.musings : []).map(m => clean(m, 70)).filter(Boolean).slice(0, 4),
+    trick: TRICKS.includes(out.trick) ? out.trick : null,
     mood: MOODS.includes(out.mood) ? out.mood : 'happy',
     minutes: Math.max(5, Math.min(out.activity === 'sleep' ? 660 : 600, Math.round(Number(out.minutes) || 30))),
     usage: used

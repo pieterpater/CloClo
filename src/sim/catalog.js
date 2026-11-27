@@ -15,5 +15,11 @@ export const ACTIVITY_INFO = {
   letter: 'Write a letter to Grandma and post it at the post office. Open 9:00–17:00.',
   butterflies: 'Chase butterflies with a net in the flower meadow (never catches them, just says hello). 8:00–19:00.',
   cat: 'Find Biscuit the village cat on the square and cuddle her.',
+  feed_ducks: 'Feed bread to the two ducks on the pond; they come swimming over.',
+  feed_chickens: 'Scatter grain for the four chickens at the Little farm (Dot, Pebble, Clara and Hettie).',
+  pet_sheep: 'Pet and hug Wooly the sheep at the Little farm.',
+  feed_rabbits: 'Give carrots to Bun and Bean, the rabbits in the hutch at the Little farm.',
+  train_pip: 'Teach Pip the puppy a trick on the training field (sit, give a paw, jump over the hurdle, roll over, fetch the ball). He gets better each time he practises.',
+  walk_pip: 'Get Pip from his doghouse beside CloClo’s house; Pip then follows CloClo around for a few hours, wherever he goes.',
   build: 'Build with blocks in seven colours, anywhere in the village: towers, houses, bridges, animals, anything. He fetches the blocks from the crate at the block yard. What he builds stays, so he can add to it, move things around, or tidy up and start over another day. When he gets to the yard you design what he builds and where.'
 };
