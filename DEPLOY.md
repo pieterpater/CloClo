@@ -69,7 +69,21 @@ sudo ufw enable
 
 Caddy gets a certificate by itself. Open `https://your-domain` and CloClo is live.
 
-**IPv6-only VPS?** Set `HOST=::` in `/etc/cloclo.env` (listens on IPv6, and IPv4 where there is any) and open `http://[your-ipv6-address]:8080`; only visitors with IPv6 can reach it. For everyone, `cloudflared tunnel --url http://localhost:8080` gives a temporary public `https://…trycloudflare.com` address without a domain. Note that GitHub has no IPv6 (copy the code over with `scp` instead of `git clone`), and check that `curl -6 -sI https://api.anthropic.com` answers, or CloClo will use his rules.
+**IPv6-only VPS?** HTTPS works the same way: give your domain an `AAAA` record (the IPv6 version of an `A` record) instead of an `A` record; Let's Encrypt validates over IPv6 too. A free dynamic-DNS name that supports `AAAA` records works as well.
+
+**No domain, but no `:8080` in the address either?** Keep `HOST=127.0.0.1` and let Caddy serve plain HTTP on port 80 (browsers will show "Not secure"):
+
+```
+:80 {
+	@notstream not path /api/stream
+	encode @notstream gzip
+	reverse_proxy 127.0.0.1:8080
+}
+```
+
+Open `http://[your-ipv6-address]/`.
+
+**Or straight to port 8080 on IPv6:** set `HOST=::` in `/etc/cloclo.env` (listens on IPv6, and IPv4 where there is any) and open `http://[your-ipv6-address]:8080`; only visitors with IPv6 can reach it. For everyone, `cloudflared tunnel --url http://localhost:8080` gives a temporary public `https://…trycloudflare.com` address without a domain. Note that GitHub has no IPv6 (copy the code over with `scp` instead of `git clone`), and check that `curl -6 -sI https://api.anthropic.com` answers, or CloClo will use his rules.
 
 No domain? Skip step 5, set `HOST=0.0.0.0` in `/etc/cloclo.env`, run `sudo systemctl restart cloclo` and `sudo ufw allow 8080/tcp`, and open `http://your-vps-ip:8080`.
 
