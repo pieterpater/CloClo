@@ -47,7 +47,7 @@ export function buildBlockYard() {
     mesh(new THREE.SphereGeometry(.09, 8, 6), bulbMat, a[0] + (b[0] - a[0]) * t, postH - .15 - sag, a[1], group).castShadow = false;
   }
   const light = new THREE.PointLight(0xffc46b, 0, 16, 2);
-  light.position.set(0, postH - .6, -edge + .6);
+  light.position.set(0, postH + .4, edge * .4); // above the middle, a bit to the front, so the faces he looks at are lit
   group.add(light);
   lamps.push(light); // lighting.js turns it on at dusk, like the street lamps
 }
