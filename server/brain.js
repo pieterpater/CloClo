@@ -73,7 +73,9 @@ function tidyLine(st) {
   const t = st.tidy;
   if (!t) return [];
   const next = t.next ? ` Next prize: ${clean(t.next.name, 80)} at ${Number(t.next.stars)} stars.` : ' He has won every prize.';
-  return [`Tidy stars: ${Number(t.stars) || 0}. Blocks lying around the village (outside the block yard): ${Number(t.mess) || 0}.${next}`, t.news ? clean(t.news, 200) : ''];
+  const mess = Number(t.mess) || 0, max = Number(t.max) || 60;
+  const full = mess >= max ? ` The village is FULL of blocks: no new block can go outside the block yard until he tidies up (at most ${max} may lie around).` : mess >= max * .6 ? ` That's getting messy (at most ${max} may lie around the village).` : '';
+  return [`Tidy stars: ${Number(t.stars) || 0}. Blocks lying around the village (outside the block yard): ${mess}.${full}${next}`, t.news ? clean(t.news, 200) : ''];
 }
 
 // His memories of earlier days, oldest first.
@@ -202,7 +204,7 @@ export async function planBuild(st) {
       : `CloClo is at the block yard, with a crate full of blocks, and is about to build. You design what he builds, and where: anywhere in the village. He walks to each spot himself.`,
     'He can\'t walk through blocks, but he can climb: up one block at a time (stairs!), down up to three, and he can stand on top of blocks if there are two free levels above. So he can build stairs, towers to stand on, walkways and bridges to walk over or under. Don\'t wall him in, unless he wants to.',
     Number(st.floor) > 0 ? `He is standing on top of blocks, ${Number(st.floor)} up.` : '',
-    ...tidyLine(st),
+    ...tidyLine({ tidy: { ...st.tidy, max: st.messMax } }),
     'The block yard\'s sandy plot: every spot within 4 of (-13, -21). Blocks there are never mess.',
     st.stuck ? `Blocks were just in his way to ${clean(st.stuck.place, 40)}.` : '',
     st.boxed && Array.isArray(st.wayOut) && st.wayOut.length
