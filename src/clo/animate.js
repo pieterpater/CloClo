@@ -45,6 +45,13 @@ export function animateCloClo(model, S, anim, rd, moodName, isNight) {
     feet[1].position.z = .2 - Math.sin(w) * .25;
     arms[0].rotation.x = Math.sin(w) * .6;
     arms[1].rotation.x = -Math.sin(w) * .6;
+  } else if (S.mode === 'stuck') {
+    // can't get through: scratches his head and looks this way and that
+    arms[1].rotation.x = -2.5 + Math.sin(anim * 5) * .15;
+    arms[1].rotation.z = .4;
+    body.rotation.z = Math.sin(anim * 1.6) * .1;
+    lookGoal.set(Math.sin(anim * 1.6) * .07, .02);
+    mouthOpen = Math.sin(anim * .9) > .7;
   } else if (S.mode === 'thinking') {
     // pondering: head tilted, hand on chin, eyes up
     body.rotation.z = Math.sin(anim * 1.2) * .1;

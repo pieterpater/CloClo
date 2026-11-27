@@ -28,7 +28,7 @@ export function updateHud(mood, S, viewers, connected, speed) {
   const a = ACTS[S.act];
   if (!a) return;
   const L = LOC[a.loc];
-  nowTxt.textContent = S.mode === 'thinking' ? 'is deciding what to do next' : S.mode === 'walking'
+  nowTxt.textContent = S.mode === 'thinking' ? 'is deciding what to do next' : S.mode === 'stuck' ? 'is stuck: blocks are in the way' : S.mode === 'walking'
     ? (a.loc === 'home' ? 'walking home' : 'walking to the ' + (a.loc === 'square' ? 'square' : L.name.toLowerCase()))
     : S.act === 'build' && S.idea ? 'is building ' + S.idea : a.txt;
   nowLoc.textContent = L.name;

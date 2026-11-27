@@ -5,6 +5,7 @@ import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
 import { TRICKS, TRICK_NAMES } from './pip.js';
+import { planWalk, cellOf } from './walk.js';
 import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
@@ -14,6 +15,7 @@ import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_
 const DECIDING = ['Hmm… what shall I do next?', 'What now, what now…', 'Let me think…', 'Ooh, I have an idea… wait.', 'So many things to do!', 'Where shall I go?'];
 const DESIGNING = ['Hmm… what shall I build?', 'Something tall? Something round?', 'I need a good idea…', 'Let me look at my blocks…'];
 const FINISHED = ['Ta-da!', 'I made this!', 'Look at it!', 'Not bad at all!', 'My best one yet?', 'Finished!'];
+const STUCK = ['I can’t get through!', 'Who put these blocks here? Oh. Me.', 'Hmm. Blocks everywhere.', 'There’s no way past!', 'Oh no, I’m stuck!'];
 const BITES = ['A bite!', 'Ooh, a tug!', 'Something’s pulling!', 'Fish!'];
 const CATCHES = ['Caught a fish! I put it back, it looked so sad.', 'A tiny silver fish! I let it swim home.', 'I caught a fish and said sorry, then let it go.', 'A fish with a funny face! Back you go.', 'I caught a fish. We looked at each other. I let it go.'];
 
@@ -103,14 +105,18 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
 
   function choose() {
     const h = hour();
-    if (!opts.decide || !opts.canDecide()) return start(ruleChoice(h));
+    if (!opts.decide || !opts.canDecide()) {
+      // without the model: stuck twice in a row, so clear a way out first
+      if ((S.stuckCount || 0) >= 2) { S.escapeAt = clo.position.clone(); return start('build'); }
+      return start(ruleChoice(h));
+    }
     // ask the language model; meanwhile CloClo stands and ponders
     S.mode = 'thinking';
     S.thought = pickNew(DECIDING);
     Promise.resolve(opts.decide({
       time: dayLabel(world.T), hour: h, plan: S.plan,
       pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
-      previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories,
+      previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories, stuck: S.stuck,
       open: Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
@@ -144,7 +150,18 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.last = [best, ...S.last].slice(0, 4);
     const tgt = targetFor(a);
     S.tgt = tgt;
-    S.queue = route(S.here, tgt);
+    // his usual route, but around any blocks in the way; if the place is walled off, he walks as
+    // close as he can and gets stuck there
+    const walk = planWalk(clo.position, route(S.here, tgt));
+    S.queue = walk.pts;
+    S.blockedWay = !walk.reached;
+    S.buildHere = false;
+    if (best === 'build' && (S.blockedWay || S.escapeAt)) {
+      // can't get to the block yard (or must clear a way out): he builds right where he is
+      S.queue = [];
+      S.blockedWay = false;
+      S.buildHere = true;
+    }
     S.here = { ang: tgt.ang, pts: tgt.pts };
     if (tgt.cat) cat.meet(tgt.cat, tgt.pts[0]);
     // which trick to practise with Pip: the model's choice, or the first one he doesn't know well yet
@@ -157,9 +174,29 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.anchor = null;
   }
 
+  // Blocks are in the way and there is no way around: he stops, says so, and decides again.
+  function enterStuck() {
+    const a = ACTS[S.act];
+    const where = a.loc === 'home' ? 'my house' : a.loc === 'square' ? 'the square' : 'the ' + LOC[a.loc].name.toLowerCase();
+    S.mode = 'stuck';
+    S.left = 10;
+    S.moving = false;
+    S.thought = pickNew(STUCK);
+    S.wow = true;
+    S.tNext = world.T + 1e9;
+    write(`Blocks are in my way! I can’t get to ${where}.`);
+    S.stuck = { act: S.act, place: LOC[a.loc].name };
+    S.stuckCount = (S.stuckCount || 0) + 1;
+    if (S.act === 'cat') cat.release();
+    S.here = { ang: Math.atan2(clo.position.z, clo.position.x), pts: [clo.position.clone().setY(0)] };
+  }
+
   function arrive() {
     const a = ACTS[S.act];
     S.mode = 'doing';
+    S.stuck = null;
+    S.stuckCount = 0;
+    if (S.buildHere) S.here = { ang: Math.atan2(clo.position.z, clo.position.x), pts: [clo.position.clone().setY(0)] };
     S.left = S.minutes || a.dur(hour());
     S.face = S.tgt.face;
     S.tNext = world.T + 8;
@@ -223,13 +260,19 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.left = 1e9; // until the building is done
     S.build = { steps: null, t: 0, carry: null };
     S.tNext = world.T + 1e9;
+    if (S.escapeAt) {
+      const at = S.escapeAt;
+      S.escapeAt = null;
+      return setBuildPlan({ idea: 'a way out', thought: 'I need to clear a way out!', steps: [{ action: 'clear', x: Math.round(at.x), z: Math.round(at.z) }] });
+    }
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(rulesPlan());
     S.thought = pickNew(DESIGNING);
     const p = clo.position;
     const ask = {
       yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
-      blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) }
+      blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) },
+      inPlace: S.buildHere, stuck: S.stuck
     };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
@@ -258,10 +301,10 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
   function stepBuild(gd) {
     const b = S.build;
     if (!b || !b.steps) return;
-    // walking to the next spot: he stands just beside it, on the side he comes from
-    if (b.go) {
-      if (!walkTowards(b.go.x, b.go.z, gd)) return;
-      b.go = null;
+    // walking to the next spot (around blocks): he stands just beside it, on the side he comes from
+    if (b.path) {
+      if (b.path.length) { if (walkTowards(b.path[0].x, b.path[0].z, gd)) b.path.shift(); return; }
+      b.path = null;
       b.t = STEP_MINUTES;
     }
     b.t -= gd;
@@ -269,11 +312,20 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     while (b.steps.length) {
       const st = b.steps[0];
       const dx = st.x - clo.position.x, dz = st.z - clo.position.z, d = Math.hypot(dx, dz);
-      if (d > 1.6 || d < .6) {
+      const placing = st.action === 'place' || st.action === 'put';
+      // he can reach a little further to take a block than to put one down neatly
+      if (d > (placing ? 1.7 : 2.4) || (placing && d < .6)) {
+        if (b.tried === st) { b.steps.shift(); b.tried = null; continue; } // couldn't get there: skip it
         const k = d > .01 ? 1.1 / d : 0;
-        b.go = { x: st.x - dx * k + (d > .01 ? 0 : 1.1), z: st.z - dz * k };
+        const stand = new THREE.Vector3(st.x - dx * k + (d > .01 ? 0 : 1.1), 0, st.z - dz * k);
+        b.path = planWalk(clo.position, [stand]).pts;
+        b.tried = st;
         return;
       }
+      b.tried = null;
+      // never build on the spot he is standing on
+      const [cx, cz] = cellOf(clo.position);
+      if (placing && cx === st.x && cz === st.z) { b.steps.shift(); continue; }
       b.steps.shift();
       const v = applyStep(st, b.carry);
       if (v < 0) continue; // a full, empty or forbidden spot: skip it
@@ -334,7 +386,10 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
         if (d <= step) { clo.position.copy(p); S.queue.shift(); step -= d; }
         else { clo.position.addScaledVector(tmp, step / d); S.face = Math.atan2(tmp.x, tmp.z); step = 0; }
       }
-      if (!S.queue.length) arrive();
+      if (!S.queue.length) { if (S.blockedWay) enterStuck(); else arrive(); }
+    } else if (S.mode === 'stuck') {
+      S.left -= gd;
+      if (S.left <= 0) { S.prev = null; S.mode = 'choosing'; }
     } else if (S.mode === 'doing') {
       const a = ACTS[S.act];
       S.left -= gd;
