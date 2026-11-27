@@ -5,6 +5,7 @@ import { createCat } from './cat.js';
 import { createPip } from './pip.js';
 import { garden, growGarden } from './garden.js';
 import { yard, yardToString, yardFromString } from './blocks.js';
+import { tidy, tidyLoad, tidySave, messCount } from './tidy.js';
 
 // Everything that happens in Mosdorp, without any drawing. It runs on the server (one CloClo for
 // everyone, see server/sim.js) or, without a server, in the browser.
@@ -68,7 +69,8 @@ export function createSimulation(opts = {}) {
         walking: pip.walking, sleeping: pip.sleeping, tries: pip.tries
       },
       growth: r2(garden.growth),
-      yard: yardToString(), idea: yard.idea
+      yard: yardToString(), idea: yard.idea,
+      tidy: { stars: tidy.stars, prizes: tidy.prizes }
     };
   }
 
@@ -77,7 +79,7 @@ export function createSimulation(opts = {}) {
   function save() {
     const S = brain.S;
     return {
-      version: 1, T: world.T, mood: S.mood, yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
+      version: 1, T: world.T, mood: S.mood, tidy: tidySave(), yard: yardToString(), idea: yard.idea, growth: garden.growth, diary, memory: brain.memory,
       last: S.last, prev: S.act, plan: S.plan,
       memories: S.memories, today: S.today, todayActs: S.todayActs, here: { ang: S.here.ang, pts: S.here.pts.map(v => v.toArray()) },
       pos: body.position.toArray(), floor: S.floor, cat: cat.pos.toArray(), pip: pip.save(), learned: S.learned || []
@@ -89,6 +91,8 @@ export function createSimulation(opts = {}) {
     world.T = d.T;
     S.mood = d.mood || 'happy';
     yardFromString(d.yard);
+    tidyLoad(d.tidy);
+    if (tidy.low === null) tidy.low = messCount(); // from now on, cleaning up what lies around earns stars
     yard.idea = d.idea || '';
     garden.growth = d.growth;
     diary.splice(0, diary.length, ...d.diary.slice(0, DIARY_MAX));
