@@ -75,9 +75,13 @@ export function startSim() {
     sim.tick(Math.min(1, (now - last) / 1000) * SPEED); // never jump more than a second
     last = now;
   }, TICK_MS);
+  let lastYard = null;
   setInterval(() => {
     if (!viewers.size) return;
     const snap = { ...sim.snapshot(), viewers: viewers.size };
+    // the block yard only when it changed (new viewers get it in their welcome message)
+    if (snap.yard === lastYard) delete snap.yard;
+    else lastYard = snap.yard;
     viewers.forEach(res => send(res, null, snap));
   }, SEND_MS);
   const save = () => {

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { scene } from '../scene.js';
-import { mesh, mat, box } from '../helpers.js';
+import { mesh, mat, box, bulbMat } from '../helpers.js';
 import { LOC } from './locations.js';
+import { lamps } from './lamps.js';
 import { SIZE } from '../sim/blocks.js';
 import { emit } from '../particles.js';
 
 // Draws the block yard and whatever CloClo has built there (the blocks themselves come from sim/blocks.js).
-const CELL = .9, BLOCK = .84;
+const CELL = .9, BLOCK = .84, HALF = (SIZE - 1) / 2 * CELL;
 const COLOURS = { r: 0xe63946, o: 0xf4a261, y: 0xffd166, g: 0x52b788, b: 0x4cc9f0, p: 0x9b5de5, w: 0xf8f9fa };
 const geo = new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK);
 let group = null, last = null;
@@ -33,21 +34,39 @@ export function buildBlockYard() {
     const b = mesh(new THREE.BoxGeometry(.4, .4, .4), mat(COLOURS[c]), edge + .8 + (i % 3) * .3, .75 + Math.floor(i / 3) * .3, 1.4 + (i % 2) * .35, group);
     b.rotation.y = i * .7;
   });
+
+  // string lights between two posts at the back corners, and a lamp, so he can see what he builds at night
+  const postH = 5.2, corners = [[-edge - .3, -edge - .3], [edge + .3, -edge - .3]];
+  for (const [x, z] of corners) {
+    mesh(new THREE.CylinderGeometry(.08, .1, postH, 6), mat(0x8a5a3b), x, postH / 2, z, group);
+    mesh(new THREE.SphereGeometry(.18, 10, 8), bulbMat, x, postH + .1, z, group);
+  }
+  const [a, b] = corners, n = 13;
+  for (let i = 1; i < n; i++) {
+    const t = i / n, sag = Math.sin(t * Math.PI) * .9;
+    mesh(new THREE.SphereGeometry(.09, 8, 6), bulbMat, a[0] + (b[0] - a[0]) * t, postH - .15 - sag, a[1], group).castShadow = false;
+  }
+  const light = new THREE.PointLight(0xffc46b, 0, 16, 2);
+  light.position.set(0, postH - .6, -edge + .6);
+  group.add(light);
+  lamps.push(light); // lighting.js turns it on at dusk, like the street lamps
 }
 
-// yard: the compact string from the simulation, e.g. "rry,,b,…" (one group per spot, bottom to top)
+// yard: the compact string from the simulation, e.g. "rry,,b.b,…" (one group per spot, bottom to top, '.' = empty)
 export function updateBlockYard(yard, anim) {
-  if (yard !== last) {
+  if (yard != null && yard !== last) {
     const firstTime = last === null;
     const cols = yard.split(',');
     const want = new Map();
     for (let i = 0; i < SIZE * SIZE; i++) {
       const x = i % SIZE, z = Math.floor(i / SIZE);
-      [...(cols[i] || '')].forEach((c, level) => want.set(`${x},${z},${level}`, c));
+      [...(cols[i] || '')].forEach((c, level) => { if (c !== '.') want.set(`${x},${z},${level}`, c); });
     }
-    // remove blocks that are gone or changed colour
+    // remove blocks that are gone or changed colour (a few sparkles when he tidies up)
+    let sparkles = 0;
     for (const [key, m] of meshes) {
       if (want.get(key) !== m.userData.c) {
+        if (!firstTime && sparkles++ < 3) emit('sparkle', m.getWorldPosition(tmp));
         group.remove(m);
         meshes.delete(key);
       }
@@ -56,7 +75,7 @@ export function updateBlockYard(yard, anim) {
     for (const [key, c] of want) {
       if (meshes.has(key)) continue;
       const [x, z, level] = key.split(',').map(Number);
-      const m = mesh(geo, mat(COLOURS[c] ?? 0xffffff), -2.25 + x * CELL, .1 + BLOCK / 2 + level * BLOCK, 2.25 - z * CELL, group);
+      const m = mesh(geo, mat(COLOURS[c] ?? 0xffffff), -HALF + x * CELL, .1 + BLOCK / 2 + level * BLOCK, HALF - z * CELL, group);
       m.userData = { c, born: firstTime ? -10 : anim };
       meshes.set(key, m);
       if (!firstTime) emit('sparkle', m.getWorldPosition(tmp).setY(m.position.y + .6));

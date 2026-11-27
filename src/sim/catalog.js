@@ -15,5 +15,5 @@ export const ACTIVITY_INFO = {
   letter: 'Write a letter to Grandma and post it at the post office. Open 9:00–17:00.',
   butterflies: 'Chase butterflies with a net in the flower meadow (never catches them, just says hello). 8:00–19:00.',
   cat: 'Find Biscuit the village cat on the square and cuddle her.',
-  build: 'Build something at the block yard with stackable blocks in seven colours: towers, houses, animals, anything. What he builds stays there, so he can add to it, change it or start over another day. When he gets there you design what he builds.'
+  build: 'Build something at the block yard with blocks in seven colours: towers, houses, bridges, animals, anything. What he builds stays there, so he can add to it, change it, or tidy everything up and start over another day. When he gets there you design what he builds.'
 };

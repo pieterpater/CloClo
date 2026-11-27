@@ -34,9 +34,13 @@ function remoteSource(es, hello, onDiary) {
   let offset = hello.snapshot.t - Date.now(), connected = true;
   hello.diary.slice().reverse().forEach(onDiary);
 
+  let yard = hello.snapshot.yard;
   es.onmessage = e => {
     const s = JSON.parse(e.data);
     connected = true;
+    // the server only sends the block yard when it changed
+    if (s.yard === undefined) s.yard = yard;
+    else yard = s.yard;
     // smoothed estimate of the server clock, so network jitter doesn't make him stutter
     offset += (s.t - Date.now() - offset) * .1;
     buf.push(s);

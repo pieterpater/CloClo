@@ -143,12 +143,13 @@ const BUILD_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          action: { type: 'string', enum: ['place', 'remove'] },
+          action: { type: 'string', enum: ['place', 'remove', 'clear'] },
           x: { type: 'integer' },
           z: { type: 'integer' },
+          y: { type: 'integer' },
           color: { type: 'string', enum: COLOURS }
         },
-        required: ['action', 'x', 'z', 'color'],
+        required: ['action', 'x', 'z', 'y', 'color'],
         additionalProperties: false
       }
     }
@@ -156,33 +157,38 @@ const BUILD_SCHEMA = {
   required: ['idea', 'thought', 'steps'],
   additionalProperties: false
 };
-const MAX_STEPS = 16;
+const MAX_STEPS = 24;
 
 export async function planBuild(st) {
   const text = [
     'CloClo is at the block yard and is about to build. You design what he builds.',
-    `The yard is a grid of ${SIZE} by ${SIZE} spots: x goes from 0 to ${SIZE - 1}, left to right as he faces it; z goes from 0 (the front, closest to him) to ${SIZE - 1} (the back).`,
-    `Blocks stack: each spot holds at most ${MAX_H} blocks. Colours: ${COLOURS.join(', ')}.`,
-    'What stands there now, per spot, from the bottom up:',
-    clean(st.yard, 4000).replace(/ (x\d)/g, '\n$1') || 'The yard is empty.',
+    `The yard is a grid of ${SIZE} by ${SIZE} spots: x goes from 0 to ${SIZE - 1}, left to right as he faces it; z goes from 0 (the front, closest to him) to ${SIZE - 1} (the back). y is the level: 0 is the ground, up to ${MAX_H - 1}.`,
+    `Colours: ${COLOURS.join(', ')}.`,
+    'What stands there now, per spot, from level 0 up ("_" is an empty level):',
+    clean(st.yard, 6000).replace(/ (x\d)/g, '\n$1') || 'The yard is empty.',
     st.idea ? `The last thing he built there: "${clean(st.idea, 80)}".` : 'He has never built anything here.',
+    st.crowded ? 'The yard is getting crowded: he should tidy up first (a "clear" step) and then build something new.' : '',
     `His plan: ${clean(st.plan, 120) || 'none'}.`,
     ...memoryLines(st),
     'Recent diary (newest first):',
     ...(st.diary || []).slice(0, 6).map(d => `- ${clean(d, 140)}`),
     '',
-    `He can add to what is there, change it, or take blocks away and start something new. Use up to ${MAX_STEPS} steps, in the order he does them: "place" puts a block of that colour on top of a spot, "remove" takes the top block off a spot (its colour doesn't matter).`,
+    `He can add to what is there, change it, or tidy up and start something new. He likes to start fresh now and then. Use up to ${MAX_STEPS} steps, in the order he does them:`,
+    '- "place": a block of that colour at spot x, z. With y = -1 it goes on top of the stack; with a level y it goes exactly there, but only if it rests on a block below it or touches a block beside it at the same level (so bridges, arches and windows are possible).',
+    '- "remove": takes a block away: the top one with y = -1, or the one at level y.',
+    '- "clear": puts every block back in the crate (x, z, y and color don\'t matter). Use it as the first step to start fresh.',
     'Reply with JSON:',
-    '- idea: what he is building, a short phrase like "a tower for Biscuit" or "a red house with a door" (at most 50 characters).',
+    '- idea: what he is building, a short phrase like "a tower for Biscuit" or "a bridge for the ducks" (at most 50 characters).',
     '- thought: what he thinks as he starts (at most 70 characters, first person).',
     '- steps: the building steps.'
-  ].join('\n');
-  const { out, usage: used } = await ask(text, BUILD_SCHEMA, 2048);
+  ].filter(Boolean).join('\n');
+  const { out, usage: used } = await ask(text, BUILD_SCHEMA, 3000);
   const ok = n => Number.isInteger(n) && n >= 0 && n < SIZE;
+  const okY = y => Number.isInteger(y) && y >= -1 && y < MAX_H;
   const steps = (out.steps || [])
-    .filter(s => (s.action === 'place' || s.action === 'remove') && ok(s.x) && ok(s.z) && COLOURS.includes(s.color))
+    .filter(s => s.action === 'clear' || ((s.action === 'place' || s.action === 'remove') && ok(s.x) && ok(s.z) && okY(s.y) && COLOURS.includes(s.color)))
     .slice(0, MAX_STEPS)
-    .map(s => ({ action: s.action, x: s.x, z: s.z, color: s.color }));
+    .map(s => (s.action === 'clear' ? { action: 'clear' } : { action: s.action, x: s.x, z: s.z, y: s.y, color: s.color }));
   if (!steps.length) throw new Error('no usable building steps');
   return { idea: clean(out.idea, 60) || 'something', thought: clean(out.thought, 100), steps, usage: used };
 }

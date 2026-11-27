@@ -4,7 +4,7 @@ import { pick } from './util.js';
 import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
-import { yard, applyStep, rulesPlan, describeYard, blockCount } from './blocks.js';
+import { yard, applyStep, rulesPlan, describeYard, blockCount, expandClear, SIZE, CAPACITY } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
 // decides freely, and without it simple rules pick something that suits the time of day.
@@ -217,14 +217,14 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
     const useModel = opts.planBuild && opts.canDecide();
     if (!useModel) return setBuildPlan(rulesPlan());
     S.thought = pickNew(DESIGNING);
-    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories };
+    const ask = { yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories, crowded: blockCount() > CAPACITY * .15 };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
     });
   }
 
   function setBuildPlan(plan) {
-    S.build.steps = plan.steps.slice();
+    S.build.steps = expandClear(plan.steps);
     yard.idea = plan.idea;
     S.thought = plan.thought || pick(ACTS.build.why);
     write(S.thought);
@@ -233,7 +233,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
 
   // where spot (x, z) of the grid is in the world
   function spotPos(x, z) {
-    const L = LOC.blocks, lx = -2.25 + x * .9, lz = 2.25 - z * .9;
+    const L = LOC.blocks, half = (SIZE - 1) / 2 * .9, lx = -half + x * .9, lz = half - z * .9;
     return { x: L.x + lx * Math.cos(L.rot) + lz * Math.sin(L.rot), z: L.z - lx * Math.sin(L.rot) + lz * Math.cos(L.rot) };
   }
 
@@ -248,7 +248,7 @@ export function createBrain(body, cat, writeDiary, opts = {}) {
       const p = spotPos(st.x, st.z);
       S.face = Math.atan2(p.x - clo.position.x, p.z - clo.position.z);
       S.placed = (S.placed || 0) + 1; // viewers see a new block appear
-      b.t = STEP_MINUTES;
+      b.t = st.action === 'clearcol' ? 1 : STEP_MINUTES; // tidying up goes quicker than building
       return;
     }
     // done: admire it for a moment

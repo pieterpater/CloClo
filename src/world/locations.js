@@ -17,7 +17,7 @@ export const LOC = {
   icecream: { name: 'Ice cream stand', x: 21, z: 1, off: 2.4, labelH: 5.6, clear: 5 },
   hill: { name: 'Lookout hill', x: -26, z: 1, off: 0, labelH: 6.4, clear: 9, roadStop: 6.6 },
   meadow: { name: 'Flower meadow', x: -9, z: 23, off: 2.6, labelH: 2.6, clear: 5.5 },
-  blocks: { name: 'Block yard', x: -13, z: -21, off: 3.9, labelH: 6.4, clear: 6.5 }
+  blocks: { name: 'Block yard', x: -13, z: -21, off: 4.9, labelH: 9.8, clear: 8 }
 };
 
 // The lookout hill: a smooth bump CloClo can walk up.
