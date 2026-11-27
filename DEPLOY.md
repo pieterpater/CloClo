@@ -63,11 +63,13 @@ sudo nano /etc/caddy/Caddyfile      # replace cloclo.example.com with your domai
 sudo systemctl reload caddy
 
 sudo ufw allow OpenSSH
-sudo ufw allow 80,443/tcp
+sudo ufw allow 443/tcp
 sudo ufw enable
 ```
 
-Caddy gets a certificate by itself. Open `https://your-domain` and CloClo is live.
+Caddy gets a certificate by itself and renews it. Open `https://your-domain` and CloClo is live.
+
+The site is HTTPS-only: Caddy doesn't listen on port 80 at all, gets its certificate over port 443, and tells browsers (HSTS) to always use HTTPS for the domain. Only port 443 has to be open, also in your provider's firewall. Someone who types `http://` gets no answer the first time; browsers that have visited once go to `https://` by themselves. To get a redirect from `http://` to `https://` back, remove the `auto_https disable_redirects` block at the top of the Caddyfile and open port 80.
 
 **IPv6-only VPS?** HTTPS works the same way: give your domain an `AAAA` record (the IPv6 version of an `A` record) instead of an `A` record; Let's Encrypt validates over IPv6 too. A free dynamic-DNS name that supports `AAAA` records works as well.
 

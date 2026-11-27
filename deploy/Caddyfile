@@ -1,6 +1,21 @@
-# Caddy in front of CloClo: automatic HTTPS for your domain. See DEPLOY.md.
+# Caddy in front of CloClo: HTTPS only, on port 443. See DEPLOY.md.
 # Install: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile, change the domain, sudo systemctl reload caddy
+{
+	# no redirect listener on port 80: the site is only served over HTTPS
+	auto_https disable_redirects
+}
+
 cloclo.example.com {
+	# get and renew the certificate over port 443 only (TLS-ALPN), never over port 80
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+
+	# browsers remember to only ever use HTTPS for this domain (one year)
+	header Strict-Transport-Security "max-age=31536000"
+
 	# compress the site, but not the live stream (it must reach viewers right away)
 	@notstream not path /api/stream
 	encode @notstream gzip
