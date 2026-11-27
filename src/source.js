@@ -70,7 +70,8 @@ function remoteSource(es, hello, onDiary) {
         ...a,
         T: lerp(a.T, b.T, k),
         clo: { ...a.clo, x: jump ? b.clo.x : lerp(a.clo.x, b.clo.x, k), y: jump ? b.clo.y : lerp(a.clo.y, b.clo.y, k), z: jump ? b.clo.z : lerp(a.clo.z, b.clo.z, k) },
-        cat: { ...a.cat, x: lerp(a.cat.x, b.cat.x, k), z: lerp(a.cat.z, b.cat.z, k) }
+        cat: { ...a.cat, x: lerp(a.cat.x, b.cat.x, k), z: lerp(a.cat.z, b.cat.z, k) },
+        pip: a.pip && b.pip ? { ...a.pip, x: lerp(a.pip.x, b.pip.x, k), z: lerp(a.pip.z, b.pip.z, k), walking: a.pip.walking || b.pip.walking } : a.pip
       };
     }
   };

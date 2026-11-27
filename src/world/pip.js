@@ -3,7 +3,7 @@ import { scene } from '../scene.js';
 import { mesh, mat, box } from '../helpers.js';
 
 // Draws Pip the puppy. Where he is and what he does comes from the simulation (sim/pip.js).
-let group = null, parts = null, trickT = 0, lastTries = -1;
+let group = null, parts = null, trickT = 0, lastTries = -1, walkBlend = 0, spin = 0;
 
 export function buildPip() {
   const g = new THREE.Group();
@@ -66,10 +66,12 @@ export function updatePip(p, rd, anim) {
   if (p.tries !== lastTries) { trickT = 0; lastTries = p.tries; }
   trickT += rd;
 
+  // blend the trot in and out, so a short pause doesn't make his legs snap still
+  walkBlend += ((p.walking ? 1 : 0) - walkBlend) * Math.min(1, rd * 8);
   const w = anim * 14;
+  legs.forEach((l, i) => l.rotation.x = Math.sin(w + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .7 * walkBlend);
+  body.position.y = Math.abs(Math.sin(w)) * .05 * walkBlend;
   if (p.walking) {
-    legs.forEach((l, i) => l.rotation.x = Math.sin(w + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .7);
-    body.position.y = Math.abs(Math.sin(w)) * .05;
     if (p.doing === 'jump') body.position.y = Math.abs(Math.sin(anim * 5)) * .7; // bounding over the hurdle
     if (p.doing === 'fetch') ball.visible = true;
   } else if (p.sleeping) {
@@ -89,10 +91,10 @@ export function updatePip(p, rd, anim) {
     body.position.y = Math.sin(t * Math.PI) * .15;
   } else if (p.doing === 'fetch') {
     ball.visible = true;
-  } else if (p.doing === 'oops') {
-    // didn't get it: chases his own tail instead
-    g.rotation.y += rd * 7;
   }
+  // didn't get it: chases his own tail instead (the whole body spins, his heading stays smooth)
+  spin = p.doing === 'oops' && !p.walking ? spin + rd * 7 : spin * Math.max(0, 1 - rd * 6);
+  body.rotation.y = spin;
   // always a waggy tail, faster when he's with CloClo
   tail.rotation.z = Math.sin(anim * (p.mode === 'home' ? 6 : 14)) * (p.sleeping ? .05 : .6);
   if (!p.sleeping) head.rotation.z = Math.sin(anim * 1.3) * .12;

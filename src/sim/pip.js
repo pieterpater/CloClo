@@ -16,7 +16,7 @@ export function createPip() {
     doing: null, ok: false, tries: 0, oks: 0, // the trick he is doing right now, and how it goes
     walking: false, sleeping: false
   };
-  let target = null, idle = 0, rep = 0, train = null, runPhase = 0;
+  let target = null, idle = 0, rep = 0, train = null, runPhase = 0, chasing = false, speed = 0;
   const tmp = new THREE.Vector3();
 
   const goTo = (x, z) => { target = new THREE.Vector3(x, 0, z); };
@@ -48,9 +48,13 @@ export function createPip() {
     if (pip.mode === 'follow') {
       pip.follow -= gd;
       if (pip.follow <= 0) pip.mode = 'home';
-      // stay a little behind and beside him
+      // trot after him: set off once he's a few steps away, settle down once close, with a margin
+      // in between so he doesn't stop and start all the time; the further behind, the faster
       tmp.set(cloPos.x - pip.pos.x, 0, cloPos.z - pip.pos.z);
-      if (tmp.length() > 1.6) goTo(cloPos.x - tmp.x / tmp.length() * 1.3 + .4, cloPos.z - tmp.z / tmp.length() * 1.3);
+      const d = tmp.length();
+      if (d > 2.6) chasing = true;
+      if (d < 1.5) chasing = false;
+      if (chasing) goTo(cloPos.x - tmp.x / d * 1.3, cloPos.z - tmp.z / d * 1.3);
       else target = null;
     } else if (pip.mode === 'train' && train) {
       rep -= gd;
@@ -89,10 +93,14 @@ export function createPip() {
     if (target) {
       tmp.subVectors(target, pip.pos);
       tmp.y = 0;
-      const d = tmp.length(), step = (pip.mode === 'home' ? 1.6 : 3.4) * gd;
+      const d = tmp.length();
+      // speed up and slow down gently instead of starting and stopping at full speed
+      const want = pip.mode === 'home' ? 1.6 : pip.mode === 'follow' ? Math.min(3.8, 1.4 + d * .9) : 3.4;
+      speed += (want - speed) * Math.min(1, gd * 1.5);
+      const step = Math.max(.3, speed) * gd;
       if (d <= step) { pip.pos.copy(target); target = null; }
       else { pip.pos.addScaledVector(tmp, step / d); pip.face = Math.atan2(tmp.x, tmp.z); pip.walking = true; }
-    }
+    } else speed = 0;
     if (!pip.walking) {
       if (pip.mode === 'train' && train) pip.face = Math.atan2(train.spot.x - pip.pos.x, train.spot.z - pip.pos.z);
       else if (pip.mode === 'follow') pip.face = Math.atan2(cloPos.x - pip.pos.x, cloPos.z - pip.pos.z);
