@@ -25,7 +25,9 @@ export function lineClear(a, b) {
 
 // A* over the 1 m grid, 8 directions without cutting corners. Returns the spots to walk through, and
 // whether it reaches the goal; if not, the path leads to the reachable spot closest to the goal.
-function findPath(from, to) {
+// With `pushThrough`, blocked spots may be crossed at that extra cost (to find a way out of a box).
+function findPath(from, to, pushThrough = 0) {
+  const blockedHere = (x, z) => !pushThrough && cellBlocked(x, z);
   const [sx, sz] = cellOf(from), [gx, gz] = cellOf(to);
   const pad = 16, minX = Math.min(sx, gx) - pad, maxX = Math.max(sx, gx) + pad, minZ = Math.min(sz, gz) - pad, maxZ = Math.max(sz, gz) + pad;
   const key = (x, z) => x * 100000 + z;
@@ -43,9 +45,9 @@ function findPath(from, to) {
     if (x === gx && z === gz) break;
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
       const nx = x + dx, nz = z + dz;
-      if (nx < minX || nx > maxX || nz < minZ || nz > maxZ || cellBlocked(nx, nz)) continue;
+      if (nx < minX || nx > maxX || nz < minZ || nz > maxZ || blockedHere(nx, nz)) continue;
       if (dx && dz && (cellBlocked(x + dx, z) || cellBlocked(x, z + dz))) continue; // no squeezing past corners
-      const nk = key(nx, nz), ng = g.get(k) + (dx && dz ? 1.414 : 1);
+      const nk = key(nx, nz), ng = g.get(k) + (dx && dz ? 1.414 : 1) + (pushThrough && cellBlocked(nx, nz) ? pushThrough : 0);
       if (ng < (g.get(nk) ?? Infinity)) { g.set(nk, ng); came.set(nk, k); open.push([ng + h(nx, nz), nx, nz]); }
     }
   }
@@ -89,6 +91,12 @@ export function planWalk(from, pts) {
     at = q;
   }
   return { pts: out, reached: true };
+}
+
+// The fewest blocked spots he has to clear to walk from `from` to `to`, in the order he meets them.
+export function wayOut(from, to) {
+  const path = findPath(from, to, 25);
+  return path.pts.map(p => [Math.round(p.x), Math.round(p.z)]).filter(([x, z]) => cellBlocked(x, z));
 }
 
 export { cellOf };

@@ -86,6 +86,7 @@ function situation(st) {
     st.pip ? `Pip ${st.pip.following ? 'is walking along with him' : 'is at home by his doghouse'}. Pip's tricks (0 = not at all, 100 = knows it well): ${TRICKS.map(t => `${t} ${Number(st.pip.tricks?.[t]) || 0}`).join(', ')}.` : '',
     st.pip && st.pip.news ? clean(st.pip.news, 200) : '',
     st.stuck ? `He just tried to go to ${clean(st.stuck.place, 40)} (for ${KEYS.includes(st.stuck.act) ? st.stuck.act : 'something'}), but blocks were in his way and there was no way around them. He is standing as close as he could get.` : '',
+    st.boxed ? 'He is boxed in: blocks all around him, he can\'t walk anywhere. The only thing he can do now is build, to take blocks away and get out.' : '',
     ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -188,6 +189,9 @@ export async function planBuild(st) {
       : `CloClo is at the block yard, with a crate full of blocks, and is about to build. You design what he builds, and where: anywhere in the village. He walks to each spot himself.`,
     'He can\'t walk through blocks (only under bridges and arches whose two lowest levels are free), so don\'t wall him in, unless he wants to.',
     st.stuck ? `Blocks were just in his way to ${clean(st.stuck.place, 40)}.` : '',
+    st.boxed && Array.isArray(st.wayOut) && st.wayOut.length
+      ? `He is BOXED IN and must get out first. The quickest way out is through these spots, nearest first: ${st.wayOut.slice(0, 12).map(([x, z]) => `(${Number(x)}, ${Number(z)})`).join(', ')}. To make a spot walkable again, every block on its levels 0 and 1 must go: "remove" takes away one block at a time (y = -1 is the top one), so a spot with blocks on several levels needs several "remove" steps; "clear" puts back everything within 2 spots of (x, z). Don't place new blocks in the way.`
+      : '',
     MAP,
     `He is at (${Number(here.x) || 0}, ${Number(here.z) || 0}). y is the level: 0 is the ground, up to ${MAX_H - 1}. Colours: ${COLOURS.join(', ')}.`,
     `Blocks in the village now (${Number(st.blocks) || 0} of at most ${MAX_BLOCKS}), per spot from level 0 up ("_" is an empty level):`,

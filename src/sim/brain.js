@@ -5,7 +5,7 @@ import { LOC, heightAt } from '../world/locations.js';
 import { garden } from './garden.js';
 import { ACTS } from './acts.js';
 import { TRICKS, TRICK_NAMES } from './pip.js';
-import { planWalk, cellOf } from './walk.js';
+import { planWalk, cellOf, wayOut } from './walk.js';
 import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
@@ -103,13 +103,19 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
 
   const isOpen = (k, h) => ACTS[k].score(h) > -500;
 
+  // Boxed in: blocks all around, so he can't even reach the square.
+  const SQUARE = new THREE.Vector3(0, 0, 0);
+  const isBoxedIn = () => !planWalk(clo.position, [SQUARE]).reached;
+
   function choose() {
     const h = hour();
-    if (!opts.decide || !opts.canDecide()) {
-      // without the model: stuck twice in a row, so clear a way out first
-      if ((S.stuckCount || 0) >= 2) { S.escapeAt = clo.position.clone(); return start('build'); }
-      return start(ruleChoice(h));
+    S.boxed = isBoxedIn();
+    // Boxed in and no model (or the model's own tries didn't get him out): he clears a way out himself
+    if (S.boxed && (!opts.decide || !opts.canDecide() || (S.boxedTries || 0) >= 2)) {
+      S.escape = true;
+      return start('build');
     }
+    if (!opts.decide || !opts.canDecide()) return start(ruleChoice(h));
     // ask the language model; meanwhile CloClo stands and ponders
     S.mode = 'thinking';
     S.thought = pickNew(DECIDING);
@@ -117,11 +123,14 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       time: dayLabel(world.T), hour: h, plan: S.plan,
       pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories, stuck: S.stuck,
-      open: Object.keys(ACTS).filter(k => isOpen(k, h))
+      boxed: S.boxed,
+      // boxed in, the only thing he can do is build: take blocks away
+      open: S.boxed ? ['build'] : Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
       if (S.mode !== 'thinking') return;
       const now = hour();
-      if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary, out);
+      if (S.boxed) start('build', out && out.activity === 'build' ? out.thought : null, out && out.diary, out && out.activity === 'build' ? out : null);
+      else if (out && ACTS[out.activity] && isOpen(out.activity, now)) start(out.activity, out.thought, out.diary, out);
       else start(ruleChoice(now));
     });
   }
@@ -156,7 +165,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.queue = walk.pts;
     S.blockedWay = !walk.reached;
     S.buildHere = false;
-    if (best === 'build' && (S.blockedWay || S.escapeAt)) {
+    if (best === 'build' && (S.blockedWay || S.escape || S.boxed)) {
       // can't get to the block yard (or must clear a way out): he builds right where he is
       S.queue = [];
       S.blockedWay = false;
@@ -260,22 +269,27 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.left = 1e9; // until the building is done
     S.build = { steps: null, t: 0, carry: null };
     S.tNext = world.T + 1e9;
-    if (S.escapeAt) {
-      const at = S.escapeAt;
-      S.escapeAt = null;
-      return setBuildPlan({ idea: 'a way out', thought: 'I need to clear a way out!', steps: [{ action: 'clear', x: Math.round(at.x), z: Math.round(at.z) }] });
+    // the fewest blocks to take away to get back to the square, nearest first
+    const out = wayOut(clo.position, SQUARE);
+    const escapePlan = () => ({
+      idea: 'a way out', thought: 'That’s it, I’m getting out of here!',
+      steps: out.map(([x, z]) => ({ action: 'clearcol', x, z }))
+    });
+    if (S.escape) {
+      S.escape = false;
+      return setBuildPlan(escapePlan());
     }
     const useModel = opts.planBuild && opts.canDecide();
-    if (!useModel) return setBuildPlan(rulesPlan());
+    if (!useModel) return setBuildPlan(S.buildHere ? escapePlan() : rulesPlan());
     S.thought = pickNew(DESIGNING);
     const p = clo.position;
     const ask = {
       yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
       blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) },
-      inPlace: S.buildHere, stuck: S.stuck
+      inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null
     };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
-      if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || rulesPlan());
+      if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || (S.buildHere ? escapePlan() : rulesPlan()));
     });
   }
 
@@ -344,6 +358,13 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.tNext = world.T + 4;
     // he is somewhere in the village now: start the next walk from here
     S.here = { ang: Math.atan2(clo.position.z, clo.position.x), pts: [clo.position.clone().setY(0)] };
+    // still boxed in after building? count it: after two tries he gets himself out
+    if (isBoxedIn()) S.boxedTries = (S.boxedTries || 0) + 1;
+    else {
+      if (S.boxed) write('I’m out! Free as a bird.');
+      S.boxed = false;
+      S.boxedTries = 0;
+    }
   }
 
   function finish() {
