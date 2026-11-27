@@ -33,7 +33,10 @@ export function updateSky(rd) {
   clouds.forEach((c, i) => {
     c.position.x += rd * (.4 + i * .05);
     if (c.position.x > 75) c.position.x = -75;
-    const o = Math.min(1, Math.max(0, (camera.position.distanceTo(c.position) - 10) / 12));
+    // fade out near the camera, and when the camera is up above the clouds (the overview)
+    const near = Math.min(1, Math.max(0, (camera.position.distanceTo(c.position) - 10) / 12));
+    const below = Math.min(1, Math.max(0, (c.position.y - 2 - camera.position.y) / 6));
+    const o = near * below;
     c.userData.mat.opacity = o;
     c.visible = o > .02;
   });
