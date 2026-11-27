@@ -85,7 +85,8 @@ async function start(renderer) {
 
     const isNight = isNightAt(hour());
     const doing = c.mode === 'doing';
-    updateWorld({ anim, rd, swinging: doing && c.act === 'swing', chaseAt: doing && c.act === 'butterflies' ? model.clo.position : null, growth: view.growth, cat: view.cat, pip: view.pip, yard: view.yard, isNight, act: c.act, doing, cloPos: model.clo.position });
+    updateWorld({ anim, rd, swinging: doing && c.act === 'swing', chaseAt: doing && c.act === 'butterflies' ? model.clo.position : null, growth: view.growth, cat: view.cat, pip: view.pip, yard: view.yard, isNight, act: c.act, doing, cloPos: model.clo.position, tidy: view.tidy });
+    model.medal.visible = !!view.tidy && view.tidy.prizes.includes('medal');
     animateCloClo(model, V, anim, rd, view.mood, isNight);
     updateParticles(rd);
     updateLight(stage);
@@ -95,7 +96,7 @@ async function start(renderer) {
 
     updateBubble(stage, model.clo.position, V);
     hudT -= rd;
-    if (hudT < 0) { updateHud(view.mood, V, view.viewers, source.connected, view.speed); hudT = .25; }
+    if (hudT < 0) { updateHud(view.mood, V, view.viewers, source.connected, view.speed, view.tidy); hudT = .25; }
     requestAnimationFrame(frame);
   }
 

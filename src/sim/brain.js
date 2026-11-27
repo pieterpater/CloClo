@@ -7,6 +7,7 @@ import { ACTS } from './acts.js';
 import { TRICKS, TRICK_NAMES } from './pip.js';
 import { planWalk, cellOf, wayOut, floorsAt } from './walk.js';
 import { LEVEL } from './blocks.js';
+import { settle, nightly, tidy, messCount, nextPrize } from './tidy.js';
 import { yard, applyStep, rulesPlan, describeYard, blockCount, expandSteps, MAX_BLOCKS } from './blocks.js';
 
 // CloClo's brain: choices, moods and walking routes. He has no needs or stats: the language model
@@ -17,6 +18,20 @@ const DECIDING = ['Hmm… what shall I do next?', 'What now, what now…', 'Let 
 const DESIGNING = ['Hmm… what shall I build?', 'Something tall? Something round?', 'I need a good idea…', 'Let me look at my blocks…'];
 const FINISHED = ['Ta-da!', 'I made this!', 'Look at it!', 'Not bad at all!', 'My best one yet?', 'Finished!'];
 const STUCK = ['I can’t get through!', 'Who put these blocks here? Oh. Me.', 'Hmm. Blocks everywhere.', 'There’s no way past!', 'Oh no, I’m stuck!'];
+// The neighbours who thank him for tidying up, and the prizes they give.
+const THANKS = [
+  'Mrs. Hazel from next door waved: “Thank you for tidying up, dear!”',
+  'Old Tom said the village looks lovely and tidy again.',
+  'Nora from the blue house clapped when she saw the clean streets.',
+  'Mr. Bramble tipped his hat: “Tidy work, young CloClo!”'
+];
+const PRIZE_LINES = {
+  croissant: 'The baker gave me a golden croissant for keeping Mosdorp tidy! It’s too shiny to eat.',
+  medal: 'I got a tidy medal! I’m wearing it right now.',
+  gold: 'Gold blocks! There are gold blocks in the crate at the block yard now.',
+  trophy: 'There’s a trophy at the block yard now, with my name on it!',
+  statue: 'They put a golden statue of me on the square! I feel very tall.'
+};
 const BITES = ['A bite!', 'Ooh, a tug!', 'Something’s pulling!', 'Fish!'];
 const CATCHES = ['Caught a fish! I put it back, it looked so sad.', 'A tiny silver fish! I let it swim home.', 'I caught a fish and said sorry, then let it go.', 'A fish with a funny face! Back you go.', 'I caught a fish. We looked at each other. I let it go.'];
 
@@ -127,6 +142,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
       pip: { following: pip.mode === 'follow', tricks: Object.fromEntries(TRICKS.map(t => [t, Math.round(pip.tricks[t])])), news: S.pipNews },
       previous: S.prev, last: S.last, diary: memory, yard: { idea: yard.idea, blocks: blockCount() }, memories: S.memories, stuck: S.stuck,
       boxed: S.boxed, floor: S.floor,
+      tidy: { stars: tidy.stars, mess: messCount(), next: nextPrize(), news: S.tidyNews },
       // boxed in, the only thing he can do is build: take blocks away
       open: S.boxed ? ['build'] : Object.keys(ACTS).filter(k => isOpen(k, h))
     })).catch(() => null).then(out => {
@@ -179,6 +195,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     // which trick to practise with Pip: the model's choice, or the first one he doesn't know well yet
     S.trick = best === 'train_pip' ? (llm && TRICKS.includes(llm.trick) ? llm.trick : TRICKS.find(t => pip.tricks[t] < 100) || 'fetch') : null;
     S.pipNews = null;
+    S.tidyNews = null;
     S.thought = thought || pick(a.why);
     write(S.thought);
     S.mode = 'walking';
@@ -233,6 +250,7 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
   const MEMORY_DAYS = 7;
 
   function closeDay() {
+    nightly(); // the bar for tidy stars loosens a little each night
     // the day that is ending: after midnight it's still yesterday's evening
     const day = hour() < 6.5 ? dayNumber() - 1 : dayNumber();
     const lastDay = S.memories.length ? S.memories[S.memories.length - 1].day : 0;
@@ -289,7 +307,8 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     const ask = {
       yard: describeYard(), idea: yard.idea, plan: S.plan, diary: memory, memories: S.memories,
       blocks: blockCount(), crowded: blockCount() > MAX_BLOCKS * .6, here: { x: Math.round(p.x), z: Math.round(p.z) },
-      inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null, floor: S.floor
+      inPlace: S.buildHere, stuck: S.stuck, boxed: S.boxed, wayOut: S.boxed ? out : null, floor: S.floor,
+      tidy: { stars: tidy.stars, mess: messCount(), next: nextPrize() }, gold: tidy.prizes.includes('gold')
     };
     Promise.resolve(opts.planBuild(ask)).catch(() => null).then(plan => {
       if (S.mode === 'doing' && S.act === 'build' && S.build && !S.build.steps) setBuildPlan(plan || (S.buildHere ? escapePlan() : rulesPlan()));
@@ -375,6 +394,15 @@ export function createBrain(body, cat, pip, writeDiary, opts = {}) {
     S.moving = false;
     S.left = 8;
     S.thought = pickNew(FINISHED);
+    // fewer blocks lying around the village? then he earns tidy stars, and the neighbours notice
+    const r = settle();
+    if (r.earned) {
+      write(`${pick(THANKS)} (+${r.earned} tidy star${r.earned > 1 ? 's' : ''}, ${tidy.stars} in all)`);
+      for (const p of r.prizes) write(PRIZE_LINES[p.id]);
+      S.thought = r.prizes.length ? 'A prize! For me?!' : `${r.earned} tidy star${r.earned > 1 ? 's' : ''}! ★`;
+      S.mood = 'delighted';
+      S.tidyNews = `He just earned ${r.earned} tidy star${r.earned > 1 ? 's' : ''} for tidying up${r.prizes.length ? ', and got ' + r.prizes.map(p => p.name).join(' and ') : ''}.`;
+    }
     S.tNext = world.T + 4;
     // he is somewhere in the village now: start the next walk from here
     S.here = { ang: Math.atan2(clo.position.z, clo.position.x), pts: [clo.position.clone().setY(0)] };

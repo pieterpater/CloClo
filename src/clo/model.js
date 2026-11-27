@@ -154,5 +154,14 @@ export function buildCloClo() {
   mesh(new THREE.SphereGeometry(.08, 10, 8), new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffc46b, emissiveIntensity: 1.6 }), 0, -.05, 0, lantern);
   lantern.visible = false;
 
-  return { clo, body, eyes, looks, brows, cheeks, mouth, open, tail, tuft, feet, arms, items, lantern };
+  // the tidy medal (a prize for cleaning up): a gold disc on a red ribbon
+  const medal = new THREE.Group();
+  medal.position.set(.22, .62, .74);
+  medal.rotation.set(-.25, .3, 0);
+  body.add(medal);
+  mesh(box(.14, .2, .02), mat(0xe63946), 0, .1, 0, medal);
+  mesh(new THREE.CylinderGeometry(.1, .1, .03, 16), mat(0xffc300, { metalness: .65, roughness: .25 }), 0, -.04, .01, medal).rotation.x = Math.PI / 2;
+  medal.visible = false;
+
+  return { clo, body, eyes, looks, brows, cheeks, mouth, open, tail, tuft, feet, arms, items, lantern, medal };
 }

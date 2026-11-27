@@ -6,11 +6,13 @@
 // A block can go on top of a stack, or at a chosen level if it rests on a block below it or touches
 // a block beside it at the same level (so bridges, arches and windows are possible).
 import { LOC, NEIGHBOURS } from '../world/locations.js';
+import { hasPrize, inYard, messCount } from './tidy.js';
 
 export const MAX_H = 12, MAX_BLOCKS = 400, RADIUS = 58;
 export const LEVEL = .94; // the height of one block, in metres
-export const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white'];
-const LETTERS = 'roygbpw';
+// 'gold' is a prize for tidying up (see tidy.js); until he has it, gold blocks come out yellow
+export const COLOURS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white', 'gold'];
+const LETTERS = 'roygbpwd';
 
 export const yard = {
   cols: new Map(), // "x,z" → colours from level 0 up; null = empty level
@@ -64,7 +66,8 @@ export function applyStep(st, carrying = null) {
     return v;
   }
   // place / put
-  const i = st.action === 'put' ? carrying : COLOURS.indexOf(st.color);
+  let i = st.action === 'put' ? carrying : COLOURS.indexOf(st.color);
+  if (COLOURS[i] === 'gold' && !hasPrize('gold')) i = COLOURS.indexOf('yellow');
   if (i == null || i < 0 || blocked(st.x, st.z) || blockCount() >= MAX_BLOCKS) return -1;
   const col = c || [];
   let level = y;
@@ -155,42 +158,44 @@ export function describeYard() {
   return [...groups].map(([place, lines]) => `Near ${place}:\n${lines.join('\n')}`).join('\n');
 }
 
-// Without the language model: a small, simple plan somewhere in the village. Now and then (and
-// always when there are many blocks) he first tidies up somewhere.
+// Without the language model: a small, simple plan. The more blocks lie around the village, the more
+// likely he tidies up instead (up to 12 stacks per session, the ones near each other); otherwise he
+// builds something small, mostly in the block yard.
 export function rulesPlan() {
-  const rnd = n => Math.floor(Math.random() * n), colour = () => COLOURS[rnd(COLOURS.length)];
-  const steps = [];
-  let tidy = false;
-  const stacks = [...yard.cols.keys()];
-  if (stacks.length && (blockCount() > MAX_BLOCKS * .4 || Math.random() < .25)) {
-    const [x, z] = stacks[rnd(stacks.length)].split(',').map(Number);
-    steps.push({ action: 'clear', x, z });
-    tidy = true;
+  const rnd = n => Math.floor(Math.random() * n), colour = () => COLOURS[rnd(7)];
+  const mess = messCount();
+  const messy = [...yard.cols.keys()].map(k => k.split(',').map(Number)).filter(([x, z]) => !inYard(x, z));
+  if (messy.length && Math.random() < Math.min(.9, mess / 50)) {
+    const [ax, az] = messy[rnd(messy.length)];
+    const near = messy.sort((a, b) => Math.hypot(a[0] - ax, a[1] - az) - Math.hypot(b[0] - ax, b[1] - az)).slice(0, 12);
+    return { idea: 'a tidy village', thought: 'Time to tidy up!', steps: near.map(([x, z]) => ({ action: 'clearcol', x, z })) };
   }
-  // a site near a random place, on free ground
-  const places = Object.values(LOC).filter(L => L.dir);
+  // a site: usually in the block yard, sometimes near a random place
   let sx = 0, sz = 0;
-  for (let i = 0; i < 40; i++) {
-    const L = places[rnd(places.length)], a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 4;
+  const L0 = LOC.blocks, places = Object.values(LOC).filter(L => L.dir);
+  for (let i = 0; i < 60; i++) {
+    const inYardSite = Math.random() < .7;
+    const L = inYardSite ? L0 : places[rnd(places.length)], a = Math.random() * Math.PI * 2, r = inYardSite ? Math.random() * 2.5 : 4 + Math.random() * 4;
     sx = Math.round(L.x + Math.cos(a) * r);
     sz = Math.round(L.z + Math.sin(a) * r);
-    if (!blocked(sx, sz) && !blocked(sx + 3, sz) && !blocked(sx, sz + 1)) break;
+    if (!blocked(sx, sz) && !blocked(sx + 3, sz) && !blocked(sx, sz + 1) && (!inYardSite || inYard(sx + 3, sz))) break;
   }
-  const kind = rnd(3);
+  const where = inYard(sx, sz) ? 'in the block yard' : 'near ' + nearestPlace(sx, sz);
+  const steps = [], kind = rnd(3);
   let idea;
   if (kind === 0) {
     const a = colour(), b = colour(), h = 4 + rnd(7);
     for (let i = 0; i < h; i++) steps.push({ action: 'place', x: sx, z: sz, y: -1, color: i % 2 ? b : a });
-    idea = 'a tall tower near ' + nearestPlace(sx, sz);
+    idea = 'a tall tower ' + where;
   } else if (kind === 1) {
     const c = colour();
-    for (let x = sx; x < sx + 5; x++) steps.push({ action: 'place', x, z: sz, y: -1, color: c });
-    idea = 'a little wall near ' + nearestPlace(sx, sz);
+    for (let x = sx; x < sx + 4; x++) steps.push({ action: 'place', x, z: sz, y: -1, color: c });
+    idea = 'a little wall ' + where;
   } else {
     const c = colour(), d = colour();
     for (const x of [sx, sx + 3]) for (let y = 0; y < 2; y++) steps.push({ action: 'place', x, z: sz, y: -1, color: c });
     for (let x = sx; x <= sx + 3; x++) steps.push({ action: 'place', x, z: sz, y: 2, color: d });
-    idea = 'a little bridge near ' + nearestPlace(sx, sz);
+    idea = 'a little bridge ' + where;
   }
-  return { idea, thought: tidy ? 'First I tidy up a bit, then I build!' : 'I know just the place for it.', steps };
+  return { idea, thought: 'I know just the place for it.', steps };
 }

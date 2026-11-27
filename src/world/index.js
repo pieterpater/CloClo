@@ -16,6 +16,7 @@ import { buildLabels } from './labels.js';
 import { buildDetails, updateDetails } from './details.js';
 import { buildFarm, updateFarm } from './farm.js';
 import { buildPip, updatePip } from './pip.js';
+import { buildRewards, updateRewards } from './rewards.js';
 
 // Order matters: the seeded rnd() is consumed in this order.
 export function buildWorld() {
@@ -33,6 +34,7 @@ export function buildWorld() {
   buildBlockYard();
   buildFarm();
   buildPip();
+  buildRewards();
   buildLamps();
   buildTrees();
   buildSky();
@@ -41,7 +43,8 @@ export function buildWorld() {
 }
 
 // Draws the moving parts of the world; growth and cat come from the simulation.
-export function updateWorld({ anim, rd, swinging, chaseAt, growth, cat, pip, yard, isNight, act, doing, cloPos }) {
+export function updateWorld({ anim, rd, swinging, chaseAt, growth, cat, pip, yard, isNight, act, doing, cloPos, tidy }) {
+  updateRewards(tidy, cloPos);
   updateFarm(anim, rd, act, doing, cloPos);
   if (pip) updatePip(pip, rd, anim);
   updateDetails(anim, rd, isNight);

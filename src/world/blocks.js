@@ -9,7 +9,8 @@ import { emit } from '../particles.js';
 // Draws the block yard (his workshop with the crate) and all blocks in the village (they come from sim/blocks.js).
 // the yard's sandy plot keeps its old size; blocks themselves stand on the village grid (1 m spots)
 const SIZE = 8, CELL = .9, BLOCK = LEVEL;
-const COLOURS = { r: 0xe63946, o: 0xf4a261, y: 0xffd166, g: 0x52b788, b: 0x4cc9f0, p: 0x9b5de5, w: 0xf8f9fa };
+const COLOURS = { r: 0xe63946, o: 0xf4a261, y: 0xffd166, g: 0x52b788, b: 0x4cc9f0, p: 0x9b5de5, w: 0xf8f9fa, d: 0xffc300 };
+const blockMat = c => (c === 'd' ? mat(0xffc300, { metalness: .65, roughness: .25 }) : mat(COLOURS[c] ?? 0xffffff)); // d: gold
 const geo = new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK);
 let group = null, last = null;
 const meshes = new Map(); // "x,z,level" → mesh
@@ -76,7 +77,7 @@ export function updateBlockYard(yard, anim) {
     for (const [k, c] of want) {
       if (meshes.has(k)) continue;
       const [x, z, level] = k.split(',').map(Number);
-      const m = mesh(geo, mat(COLOURS[c] ?? 0xffffff), x, heightAt(x, z) + BLOCK / 2 + level * BLOCK, z);
+      const m = mesh(geo, blockMat(c), x, heightAt(x, z) + BLOCK / 2 + level * BLOCK, z);
       m.userData = { c, born: firstTime ? -10 : anim };
       meshes.set(k, m);
       if (!firstTime) emit('sparkle', tmp.copy(m.position).setY(m.position.y + .7));

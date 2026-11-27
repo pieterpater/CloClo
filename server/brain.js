@@ -3,6 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ACTIVITY_INFO } from '../src/sim/catalog.js';
 import { TRICKS } from '../src/sim/pip.js';
+import { PRIZES } from '../src/sim/tidy.js';
 import { COLOURS, MAX_H, MAX_BLOCKS, RADIUS } from '../src/sim/blocks.js';
 import { LOC } from '../src/world/locations.js';
 
@@ -22,6 +23,8 @@ Mosdorp: a round village with a square and a fountain in the middle. Around it: 
 He has no needs, stats or meters: nothing makes him hungry or tired. What he does is entirely up to you. Let him follow his whims, his plans, his friends, the time of day and what happened earlier, and give his days a shape and a story. Mosdorp is quiet at night and most creatures sleep then, but that is up to him too.
 
 Blocks are solid: he can't walk through them, but he can climb. He steps up one block at a time and can jump down from up to three blocks, so a single block is a step, stairs take him up high, and he can stand and walk on top of what he builds (he needs two free levels above him, so he also fits under bridges and arches). A wall two or more blocks high is in his way unless there are stairs. If blocks wall off a place, he can't get there until blocks are moved or taken away (by building) or he builds stairs over them. When he can't even reach the block yard, he builds right where he stands.
+
+The villagers love a tidy Mosdorp. Blocks in the block yard (every spot within 4 of (-13, -21)) are always fine; blocks lying around the rest of the village count as mess. When the village gets tidier than it has been, he earns a tidy star for every block taken away from around the village or moved back into the block yard, and the neighbours thank him. Building a mess and clearing it away again earns nothing. With enough stars come prizes: ${PRIZES.map(p => `${p.stars} stars: ${p.name}`).join('; ')}.
 
 Activities (use the key):
 ${KEYS.map(k => `- ${k}: ${ACTIVITY_INFO[k]}`).join('\n')}
@@ -65,6 +68,14 @@ export function brainAvailable() {
 // Plain text only, one line, limited length: this text is shown publicly.
 const clean = (s, n) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 
+// His tidy stars, the mess around the village, and the next prize.
+function tidyLine(st) {
+  const t = st.tidy;
+  if (!t) return [];
+  const next = t.next ? ` Next prize: ${clean(t.next.name, 80)} at ${Number(t.next.stars)} stars.` : ' He has won every prize.';
+  return [`Tidy stars: ${Number(t.stars) || 0}. Blocks lying around the village (outside the block yard): ${Number(t.mess) || 0}.${next}`, t.news ? clean(t.news, 200) : ''];
+}
+
 // His memories of earlier days, oldest first.
 function memoryLines(st) {
   const m = (Array.isArray(st.memories) ? st.memories : []).slice(-7);
@@ -88,6 +99,7 @@ function situation(st) {
     st.stuck ? `He just tried to go to ${clean(st.stuck.place, 40)} (for ${KEYS.includes(st.stuck.act) ? st.stuck.act : 'something'}), but blocks were in his way and there was no way around them. He is standing as close as he could get.` : '',
     st.boxed ? 'He is boxed in: blocks all around him, he can\'t walk or climb anywhere. The only thing he can do now is build, to take blocks away (or build stairs) and get out.' : '',
     Number(st.floor) > 0 ? `He is standing on top of blocks, ${Number(st.floor)} block${Number(st.floor) > 1 ? 's' : ''} up.` : '',
+    ...tidyLine(st),
     ...memoryLines(st),
     `Recent activities (newest first): ${(st.last || []).filter(k => KEYS.includes(k)).join(', ') || 'none'}.`,
     'Recent diary (newest first):',
@@ -190,12 +202,14 @@ export async function planBuild(st) {
       : `CloClo is at the block yard, with a crate full of blocks, and is about to build. You design what he builds, and where: anywhere in the village. He walks to each spot himself.`,
     'He can\'t walk through blocks, but he can climb: up one block at a time (stairs!), down up to three, and he can stand on top of blocks if there are two free levels above. So he can build stairs, towers to stand on, walkways and bridges to walk over or under. Don\'t wall him in, unless he wants to.',
     Number(st.floor) > 0 ? `He is standing on top of blocks, ${Number(st.floor)} up.` : '',
+    ...tidyLine(st),
+    'The block yard\'s sandy plot: every spot within 4 of (-13, -21). Blocks there are never mess.',
     st.stuck ? `Blocks were just in his way to ${clean(st.stuck.place, 40)}.` : '',
     st.boxed && Array.isArray(st.wayOut) && st.wayOut.length
       ? `He is BOXED IN and must get out first. The quickest way out is through these spots, nearest first: ${st.wayOut.slice(0, 12).map(([x, z]) => `(${Number(x)}, ${Number(z)})`).join(', ')}. To make a spot walkable again, every block on its levels 0 and 1 must go: "remove" takes away one block at a time (y = -1 is the top one), so a spot with blocks on several levels needs several "remove" steps; "clear" puts back everything within 2 spots of (x, z). Don't place new blocks in the way.`
       : '',
     MAP,
-    `He is at (${Number(here.x) || 0}, ${Number(here.z) || 0}). y is the level: 0 is the ground, up to ${MAX_H - 1}. Colours: ${COLOURS.join(', ')}.`,
+    `He is at (${Number(here.x) || 0}, ${Number(here.z) || 0}). y is the level: 0 is the ground, up to ${MAX_H - 1}. Colours: ${COLOURS.filter(c => c !== 'gold' || st.gold).join(', ')}${st.gold ? ' (gold is his prize for tidying!)' : ''}.`,
     `Blocks in the village now (${Number(st.blocks) || 0} of at most ${MAX_BLOCKS}), per spot from level 0 up ("_" is an empty level):`,
     clean(st.yard, 12000).replace(/ (Near |\()/g, '\n$1') || 'There are no blocks anywhere yet.',
     st.idea ? `The last thing he built: "${clean(st.idea, 80)}".` : 'He has never built anything.',

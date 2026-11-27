@@ -3,6 +3,7 @@ import { camera } from './scene.js';
 import { world, dayLabel } from './state.js';
 import { LOC } from './world/locations.js';
 import { ACTS } from './sim/acts.js';
+import { PRIZES } from './sim/tidy.js';
 
 const diaryEl = document.getElementById('diary');
 
@@ -20,7 +21,13 @@ const clockEl = document.getElementById('clock'), nowTxt = document.getElementBy
 const viewersEl = document.getElementById('viewers'), planEl = document.getElementById('nowPlan'), moodEl = document.getElementById('nowMood');
 
 // Clock, viewers, and what he is doing, feeling and planning.
-export function updateHud(mood, S, viewers, connected, speed) {
+const tidyEl = document.getElementById('tidy');
+
+export function updateHud(mood, S, viewers, connected, speed, tidy) {
+  if (tidy) {
+    const next = PRIZES.find(p => !tidy.prizes.includes(p.id));
+    tidyEl.textContent = `★ ${tidy.stars} tidy star${tidy.stars === 1 ? '' : 's'}` + (next ? ` · next prize at ${next.stars}: ${next.name}` : ' · every prize won!');
+  }
   clockEl.textContent = !connected ? 'Reconnecting…' : dayLabel(world.T) + (speed > 1 ? ` · ${speed}×` : '');
   viewersEl.hidden = !viewers;
   viewersEl.textContent = viewers === 1 ? '1 watching' : viewers + ' watching';
